@@ -1,0 +1,178 @@
+openapi: 3.0.4
+info:
+  title: Test API
+  description: Test API Description
+  version: 1.0.0-SNAPSHOT
+
+servers:
+  - url: https://jsonplaceholder.typicode.com
+    description: JSON Example API
+  - url: https://example.com
+    description: Example API
+
+paths:
+  /photos/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+    get:
+      operationId: getPhoto
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photo'
+  /serialTest:
+    get:
+      operationId: getSerialTest
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SerialTest'
+  /integerTest:
+    get:
+      operationId: getIntegerTest
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegerTest'
+  /numberTest:
+    get:
+      operationId: getNumberTest
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NumberTest'
+  /multipart:
+    servers:
+      - url: https://example.com
+    post:
+      operationId: multipart
+      security:
+        - BasicAuth: []
+        - TokenAuth: []
+        - APIKeyAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+      responses:
+        200:
+          description: OK
+  /urlencoded:
+    servers:
+      - url: https://example.com
+    post:
+      operationId: urlEncoded
+      security:
+        - BearerAuth: []
+        - TokenAuth: []
+        - APIKeyAuth: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+      responses:
+        200:
+          description: OK
+components:
+  securitySchemes:
+    TokenAuth:
+      type: apiKey
+      in: header
+      name: token
+    APIKeyAuth:
+      type: apiKey
+      in: query
+      name: token
+    BasicAuth:
+      type: http
+      scheme: basic
+    BearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Photo:
+      type: object
+      properties:
+        albumId:
+          type: integer
+          format: int32
+        id:
+          type: integer
+          format: int32
+        title:
+          type: string
+        url:
+          type: string
+        thumbnailUrl:
+          type: string
+    SerialTest:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+          format: time
+        instant:
+          type: string
+          format: date-time
+        uuid:
+          type: string
+          format: uuid
+        base64:
+          type: string
+          format: byte
+    IntegerTest:
+      type: object
+      properties:
+        unknown:
+          type: integer
+        int32:
+          type: integer
+          format: int32
+        int64:
+          type: integer
+          format: int64
+        float:
+          type: integer
+          format: float
+        double:
+          type: integer
+          format: double
+    NumberTest:
+      type: object
+      properties:
+        unknown:
+          type: number
+        float:
+          type: number
+          format: float
+        double:
+          type: number
+          format: double
+        int32:
+          type: number
+          format: int32
+        int64:
+          type: number
+          format: int64
