@@ -24,6 +24,7 @@ public fun createDefaultJson(): Json = Json {
 public fun createDefaultHttpClient(
     decorator: HttpClientConfig<*>.() -> Unit = {}
 ): HttpClient = createBaseClient {
+    expectSuccess = true
     install(HttpCookies)
     install(UserAgent) {
         agent = "ktor/${BuildConfig.KTOR} kmp-gen/${BuildConfig.COMPANION} $platformUserAgent"
