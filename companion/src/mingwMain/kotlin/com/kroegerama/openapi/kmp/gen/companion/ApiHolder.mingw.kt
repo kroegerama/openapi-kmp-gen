@@ -12,7 +12,7 @@ import platform.windows.GetVersionExW
 import platform.windows.OSVERSIONINFOW
 
 @OptIn(ExperimentalForeignApi::class)
-internal actual val platformUserAgent: String = memScoped {
+public actual val platformUserAgent: String = memScoped {
     val versionInfo = alloc<OSVERSIONINFOW>()
     versionInfo.dwOSVersionInfoSize = sizeOf<OSVERSIONINFOW>().toUInt()
     GetVersionExW(versionInfo.ptr)

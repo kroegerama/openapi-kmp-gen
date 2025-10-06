@@ -36,4 +36,4 @@ public fun createDefaultHttpClient(
 }
 
 internal expect fun createBaseClient(block: HttpClientConfig<*>.() -> Unit = {}): HttpClient
-internal expect val platformUserAgent: String
+public expect val platformUserAgent: String

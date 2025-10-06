@@ -12,7 +12,7 @@ import platform.posix.uname
 import platform.posix.utsname
 
 @OptIn(ExperimentalForeignApi::class)
-internal actual val platformUserAgent: String = memScoped {
+public actual val platformUserAgent: String = memScoped {
     val uts = alloc<utsname>()
     uname(uts.ptr)
     val sysName = uts.sysname.toKString()
