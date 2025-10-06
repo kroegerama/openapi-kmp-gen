@@ -24,9 +24,11 @@ kotlin {
     explicitApi()
 
     compilerOptions {
-        optIn.add("kotlin.io.encoding.ExperimentalEncodingApi")
         apiVersion = KotlinVersion.KOTLIN_2_1
         languageVersion = KotlinVersion.KOTLIN_2_1
+
+        optIn.add("kotlin.contracts.ExperimentalContracts")
+        optIn.add("kotlin.io.encoding.ExperimentalEncodingApi")
     }
     coreLibrariesVersion = "2.1.21"
 

@@ -3,12 +3,15 @@ package com.kroegerama.openapi.kmp.gen.companion
 import androidx.compose.runtime.Immutable
 import arrow.core.Either
 import arrow.core.getOrElse
-import io.ktor.client.call.*
-import io.ktor.client.plugins.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
-import io.ktor.serialization.*
+import io.ktor.client.call.body
+import io.ktor.client.plugins.ResponseException
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.Headers
+import io.ktor.http.isSuccess
+import io.ktor.serialization.ContentConvertException
 import kotlinx.io.IOException
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 public typealias EitherCallResponse<T> = Either<CallException, HttpCallResponse<T>>
 public typealias EitherTypedCallResponse<E, T> = Either<TypedCallException<E>, HttpCallResponse<T>>
@@ -110,3 +113,33 @@ public data class UnexpectedCallException(
     override val message: String?,
     override val cause: Throwable?
 ) : CallException()
+
+public inline fun TypedCallException<*>.onResponse(
+    block: (HttpResponse) -> Unit
+) {
+    contract {
+        callsInPlace(block, InvocationKind.AT_MOST_ONCE)
+    }
+    when (this) {
+        is TypedHttpCallException<*> -> raw
+        is HttpCallException -> raw
+        is SerializationException -> return
+        is IOCallException -> return
+        is UnexpectedCallException -> return
+    }.let(block)
+}
+
+public inline fun TypedCallException<*>.onCode(
+    block: (Int) -> Unit
+) {
+    contract {
+        callsInPlace(block, InvocationKind.AT_MOST_ONCE)
+    }
+    when (this) {
+        is TypedHttpCallException<*> -> code
+        is HttpCallException -> code
+        is SerializationException -> return
+        is IOCallException -> return
+        is UnexpectedCallException -> return
+    }.let(block)
+}
