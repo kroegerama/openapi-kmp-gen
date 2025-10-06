@@ -5,7 +5,7 @@
  * Test API Description
  * Version 1.0.0-SNAPSHOT
  * 
- * Generated Sat, 4 Oct 2025 22:37:04 +0200
+ * Generated Mon, 6 Oct 2025 13:22:04 +0200
  * OpenAPI KMP Gen (version 1.0.0-alpha01) by kroegerama
  */
 package com.kroegerama.kmp.gen.generated
@@ -23,11 +23,12 @@ public object Api : ApiHolder() {
 
   public const val version: String = "1.0.0-SNAPSHOT"
 
-  public const val createdAt: String = "2025-10-04T22:37:04+02:00"
+  public const val createdAt: String = "2025-10-06T13:22:04+02:00"
 
   public val servers: List<Url> = listOf(
     Url("https://jsonplaceholder.typicode.com/"),
     Url("https://example.com/"),
+    Url("https://mock.httpstatus.io/"),
   )
 
   override var baseUrl: Url = servers.first()

@@ -9,8 +9,29 @@ servers:
     description: JSON Example API
   - url: https://example.com
     description: Example API
+  - url: https://mock.httpstatus.io
+    description: HTTP Status API
 
 paths:
+  /{status}:
+    servers:
+      - url: https://mock.httpstatus.io
+    parameters:
+      - in: path
+        name: status
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: count
+        schema:
+          type: integer
+          format: int32
+    get:
+      operationId: redirectTest
+      responses:
+        200:
+          description: OK
   /photos/{id}:
     parameters:
       - in: path

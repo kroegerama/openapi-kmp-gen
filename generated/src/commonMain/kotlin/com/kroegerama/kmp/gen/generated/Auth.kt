@@ -5,7 +5,7 @@
  * Test API Description
  * Version 1.0.0-SNAPSHOT
  * 
- * Generated Sat, 4 Oct 2025 22:37:04 +0200
+ * Generated Mon, 6 Oct 2025 13:22:04 +0200
  * OpenAPI KMP Gen (version 1.0.0-alpha01) by kroegerama
  */
 package com.kroegerama.kmp.gen.generated

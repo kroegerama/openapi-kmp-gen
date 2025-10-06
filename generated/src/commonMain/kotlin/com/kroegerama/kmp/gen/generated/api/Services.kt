@@ -5,7 +5,7 @@
  * Test API Description
  * Version 1.0.0-SNAPSHOT
  * 
- * Generated Sat, 4 Oct 2025 22:37:04 +0200
+ * Generated Mon, 6 Oct 2025 13:22:04 +0200
  * OpenAPI KMP Gen (version 1.0.0-alpha01) by kroegerama
  */
 package com.kroegerama.kmp.gen.generated.api
@@ -20,6 +20,7 @@ import com.kroegerama.kmp.gen.generated.models.SerialTest
 import com.kroegerama.openapi.kmp.gen.`companion`.AuthPlugin.Plugin.authKeys
 import com.kroegerama.openapi.kmp.gen.`companion`.CallException
 import com.kroegerama.openapi.kmp.gen.`companion`.HttpCallResponse
+import com.kroegerama.openapi.kmp.gen.`companion`.appendSerializedQueryParameter
 import com.kroegerama.openapi.kmp.gen.`companion`.createSerializedPathSegment
 import com.kroegerama.openapi.kmp.gen.`companion`.eitherRequest
 import io.ktor.client.request.HttpRequestBuilder
@@ -30,9 +31,29 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.appendPathSegments
 import io.ktor.http.takeFrom
 import kotlin.Int
+import kotlin.String
 import kotlin.Unit
 
 public object DefaultApi {
+  /**
+   * `GET /{status}`
+   *
+   * @return OK
+   */
+  public suspend fun redirectTest(
+    status: String,
+    count: Int? = null,
+    decorator: HttpRequestBuilder.() -> Unit = {},
+  ): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("GET")
+    url.takeFrom("https://mock.httpstatus.io/")
+    url.appendPathSegments(
+      createSerializedPathSegment(value = status, explode = false, json = Api.json),
+    )
+    appendSerializedQueryParameter(name = "count", value = count, explode = true, json = Api.json)
+    decorator()
+  }
+
   /**
    * `GET /photos/{id}`
    *

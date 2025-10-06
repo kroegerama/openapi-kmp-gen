@@ -17,7 +17,6 @@ import kotlin.time.Clock
 
 fun main() {
     runBlocking {
-
         Api.setAuthProvider(Auth.TokenAuth {
             "tokenAuthValue_" + Clock.System.now().toEpochMilliseconds()
         })
@@ -31,6 +30,9 @@ fun main() {
             AuthItem.Bearer(Clock.System.now().toString())
         })
 
+        println(
+            DefaultApi.redirectTest("301")
+        )
         println(
             DefaultApi.getPhoto(1)
         )
