@@ -32,12 +32,9 @@ dependencies {
 }
 
 mavenPublishing {
-    publishToMavenCentral()
-
-    signAllPublications()
-    coordinates(group.toString(), name, version.toString())
-
-    pom(pomAction)
+    coordinates(
+        artifactId = name
+    )
 }
 
 val buildConfigDir = layout.buildDirectory.dir("generated/buildConfig")

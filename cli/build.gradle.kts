@@ -52,10 +52,7 @@ tasks {
 }
 
 mavenPublishing {
-    publishToMavenCentral()
-
-    signAllPublications()
-    coordinates(group.toString(), name, version.toString())
-
-    pom(pomAction)
+    coordinates(
+        artifactId = name
+    )
 }
