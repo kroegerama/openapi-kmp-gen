@@ -4,7 +4,9 @@ import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.plugins.DefaultRequest
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.http.ContentType
 import io.ktor.http.Url
+import io.ktor.http.contentType
 import io.ktor.http.takeFrom
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -37,6 +39,7 @@ public abstract class ApiHolder {
             }
             install(DefaultRequest) {
                 url.takeFrom(baseUrl)
+                contentType(ContentType.Application.Json)
             }
             install(AuthPlugin) {
                 authItem { key ->

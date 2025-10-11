@@ -4,6 +4,7 @@ import com.kroegerama.openapi.kmp.gen.BuildConfig
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.plugins.UserAgent
+import io.ktor.client.plugins.compression.ContentEncoding
 import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.http.HttpHeaders
@@ -28,6 +29,9 @@ public fun createDefaultHttpClient(
     install(HttpCookies)
     install(UserAgent) {
         agent = "ktor/${BuildConfig.KTOR} kmp-gen/${BuildConfig.COMPANION} $platformUserAgent"
+    }
+    install(ContentEncoding) {
+        gzip()
     }
     install(Logging) {
         sanitizeHeader { header -> header == HttpHeaders.Authorization }
