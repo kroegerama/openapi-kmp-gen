@@ -249,6 +249,15 @@ class PoetGenerator(
 
             addStatement("method = %T.parse(%S)", PoetTypes.HttpMethod, operation.method.name)
 
+            if (operation.body != null) {
+                when (operation.type) {
+                    SpecOperation.Type.Default -> addStatement("%M(%T)", PoetMembers.ContentType, PoetTypes.ContentTypeApplicationJson)
+                    SpecOperation.Type.Multipart -> Unit // content type is added automatically by ktor
+                    SpecOperation.Type.UrlEncoded -> Unit // content type is added automatically by ktor
+                    SpecOperation.Type.Unknown -> Unit
+                }
+            }
+
             if (operation.securityIds.isNotEmpty()) {
                 val authKeysCodeBlock = buildCodeBlock {
                     addStatement("%M(", PoetMembers.AuthKeys)

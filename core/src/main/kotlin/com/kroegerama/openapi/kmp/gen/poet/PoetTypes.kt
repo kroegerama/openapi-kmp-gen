@@ -57,6 +57,8 @@ class PoetTypes(
         val Deprecated = ClassName("kotlin", "Deprecated")
         val Immutable = ClassName("androidx.compose.runtime", "Immutable")
 
+        val ContentTypeApplicationJson = ClassName(KTOR_HTTP_PACKAGE, "ContentType", "Application", "Json")
+
         private val Either = ClassName("arrow.core", "Either")
 
         fun either(cn: TypeName) = Either.parameterizedBy(
@@ -67,6 +69,7 @@ class PoetTypes(
 }
 
 object PoetMembers {
+    private const val KTOR_HTTP_PACKAGE = "io.ktor.http"
     private const val KTOR_CLIENT_REQUEST_PACKAGE = "io.ktor.client.request"
     val EitherRequest = MemberName(COMPANION_PACKAGE, "eitherRequest")
     val AppendSerializedQueryParameter = MemberName(COMPANION_PACKAGE, "appendSerializedQueryParameter")
@@ -74,7 +77,8 @@ object PoetMembers {
     val AppendSerializedCookieParameter = MemberName(COMPANION_PACKAGE, "appendSerializedCookieParameter")
     val CreateSerializedPathSegment = MemberName(COMPANION_PACKAGE, "createSerializedPathSegment")
     val AuthKeys = ClassName(COMPANION_PACKAGE, "AuthPlugin", "Plugin").member("authKeys")
-    val AppendPathSegments = MemberName("io.ktor.http", "appendPathSegments")
-    val TakeFrom = MemberName("io.ktor.http", "takeFrom")
+    val AppendPathSegments = MemberName(KTOR_HTTP_PACKAGE, "appendPathSegments")
+    val TakeFrom = MemberName(KTOR_HTTP_PACKAGE, "takeFrom")
     val RequestSetBody = MemberName(KTOR_CLIENT_REQUEST_PACKAGE, "setBody")
+    val ContentType = MemberName(KTOR_HTTP_PACKAGE, "contentType")
 }
