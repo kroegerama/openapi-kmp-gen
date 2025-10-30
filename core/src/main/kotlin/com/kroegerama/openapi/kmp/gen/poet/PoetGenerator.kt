@@ -56,12 +56,25 @@ class PoetGenerator(
         )
     }
 
+    private fun FileSpec.Builder.addSuppressAnnotation() {
+        addAnnotation(
+            poetAnnotation(Suppress::class.asTypeName()) {
+                addMember(
+                    "%L", """
+                    "ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName"
+                """.trimIndent()
+                )
+            }
+        )
+    }
+
     private fun createApiFile(): FileSpec {
         return poetFile(
             packageName = options.packageName,
             fileName = types.api.simpleName
         ) {
             addFileComment("%L", specModel.fileHeader)
+            addSuppressAnnotation()
             addType(createApi())
         }
     }
@@ -72,6 +85,7 @@ class PoetGenerator(
             fileName = types.auth.simpleName
         ) {
             addFileComment("%L", specModel.fileHeader)
+            addSuppressAnnotation()
             addType(createAuth())
         }
     }
@@ -82,12 +96,7 @@ class PoetGenerator(
             fileName = "Models"
         ) {
             addFileComment("%L", specModel.fileHeader)
-
-            addAnnotation(
-                poetAnnotation(Suppress::class.asTypeName()) {
-                    addMember("%S", "ArrayInDataClass")
-                }
-            )
+            addSuppressAnnotation()
 
             val (types, typeAliases) = createTypes()
             addTypes(types)
@@ -101,6 +110,7 @@ class PoetGenerator(
             fileName = "Services"
         ) {
             addFileComment("%L", specModel.fileHeader)
+            addSuppressAnnotation()
             addTypes(createServices())
         }
     }
