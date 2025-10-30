@@ -48,6 +48,8 @@ enum class SpecPrimitiveType {
     Date,
     Time,
     DateTime,
+    EpochSeconds,
+    EpochMilliseconds,
     Base64,
     UUID
 }

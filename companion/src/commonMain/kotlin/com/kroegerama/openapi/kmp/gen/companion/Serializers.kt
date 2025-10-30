@@ -11,6 +11,7 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
 import kotlin.io.encoding.Base64
+import kotlin.time.Instant
 
 public typealias SerializableBase64 = @Serializable(Base64Serializer::class) ByteArray
 
@@ -20,6 +21,26 @@ public object Base64Serializer : KSerializer<ByteArray> {
 
     override fun serialize(encoder: Encoder, `value`: ByteArray): Unit = encoder.encodeString(Base64.encode(value))
     override fun deserialize(decoder: Decoder): ByteArray = Base64.decode(decoder.decodeString())
+}
+
+public typealias SerializableEpochSeconds = @Serializable(EpochSecondsSerializer::class) Instant
+
+public object EpochSecondsSerializer : KSerializer<Instant> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("com.kroegerama.openapi.kmp.gen.companion.EpochSecondsSerializer", PrimitiveKind.LONG)
+
+    override fun serialize(encoder: Encoder, value: Instant): Unit = encoder.encodeLong(value.epochSeconds)
+    override fun deserialize(decoder: Decoder): Instant = Instant.fromEpochSeconds(decoder.decodeLong())
+}
+
+public typealias SerializableEpochMilliseconds = @Serializable(EpochMillisecondsSerializer::class) Instant
+
+public object EpochMillisecondsSerializer : KSerializer<Instant> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("com.kroegerama.openapi.kmp.gen.companion.EpochMillisecondsSerializer", PrimitiveKind.LONG)
+
+    override fun serialize(encoder: Encoder, value: Instant): Unit = encoder.encodeLong(value.toEpochMilliseconds())
+    override fun deserialize(decoder: Decoder): Instant = Instant.fromEpochMilliseconds(decoder.decodeLong())
 }
 
 public inline fun <reified T> Json.encodeToPrimitiveString(value: T): String? {

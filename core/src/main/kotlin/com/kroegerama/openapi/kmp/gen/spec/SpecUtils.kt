@@ -24,6 +24,8 @@ fun Schema<*>.getSpecType(): SpecSchemaType {
                 "int64" -> SpecPrimitiveType.Int64
                 "float" -> SpecPrimitiveType.Float // technically not allowed, included to improve compatibility
                 "double" -> SpecPrimitiveType.Double // technically not allowed, included to improve compatibility
+                "epoch-seconds" -> SpecPrimitiveType.EpochSeconds
+                "epoch-millis" -> SpecPrimitiveType.EpochMilliseconds
                 else -> SpecPrimitiveType.Int64
             }
 

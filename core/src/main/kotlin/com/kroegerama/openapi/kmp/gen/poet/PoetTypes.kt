@@ -42,6 +42,8 @@ class PoetTypes(
         val Instant = ClassName("kotlin.time", "Instant")
         val Uuid = ClassName("kotlin.uuid", "Uuid")
         val SerializableBase64 = ClassName(COMPANION_PACKAGE, "SerializableBase64")
+        val SerializableEpochSeconds = ClassName(COMPANION_PACKAGE, "SerializableEpochSeconds")
+        val SerializableEpochMilliseconds = ClassName(COMPANION_PACKAGE, "SerializableEpochMilliseconds")
 
         private val CALL_EXCEPTION = ClassName(COMPANION_PACKAGE, "CallException")
         private val CALL_RESPONSE = ClassName(COMPANION_PACKAGE, "HttpCallResponse")

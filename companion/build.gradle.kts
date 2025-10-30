@@ -29,6 +29,7 @@ kotlin {
 
         optIn.add("kotlin.contracts.ExperimentalContracts")
         optIn.add("kotlin.io.encoding.ExperimentalEncodingApi")
+        optIn.add("kotlin.time.ExperimentalTime")
     }
     coreLibrariesVersion = "2.1.21"
 

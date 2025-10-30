@@ -602,6 +602,8 @@ class PoetGenerator(
             SpecPrimitiveType.Time -> PoetTypes.LocalTime
             SpecPrimitiveType.DateTime -> PoetTypes.Instant
             SpecPrimitiveType.Base64 -> PoetTypes.SerializableBase64
+            SpecPrimitiveType.EpochSeconds -> PoetTypes.SerializableEpochSeconds
+            SpecPrimitiveType.EpochMilliseconds -> PoetTypes.SerializableEpochMilliseconds
             SpecPrimitiveType.UUID -> PoetTypes.Uuid
         }
 
