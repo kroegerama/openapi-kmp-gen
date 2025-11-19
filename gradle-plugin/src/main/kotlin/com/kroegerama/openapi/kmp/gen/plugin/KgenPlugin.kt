@@ -1,11 +1,6 @@
 package com.kroegerama.openapi.kmp.gen.plugin
 
-import com.android.build.api.variant.LibraryAndroidComponentsExtension
-import com.android.build.gradle.AppExtension
-import com.android.build.gradle.BaseExtension
-import com.android.build.gradle.BasePlugin
-import com.android.build.gradle.LibraryExtension
-import com.android.build.gradle.internal.crash.afterEvaluate
+import com.android.build.api.variant.AndroidComponentsExtension
 import com.kroegerama.openapi.kmp.gen.BuildConfig
 import com.kroegerama.openapi.kmp.gen.Constants
 import org.gradle.api.GradleException
@@ -86,7 +81,7 @@ class KgenPlugin : Plugin<Project> {
 
         project.pluginManager.withPlugin("org.jetbrains.kotlin.android") {
             project.logger.info("[kmpgen] Configure plugin 'org.jetbrains.kotlin.android'")
-            configureKotlinAndroid(project, outputDirectory)
+            configureKotlinAndroid(project)
         }
 
         project.pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
@@ -96,7 +91,7 @@ class KgenPlugin : Plugin<Project> {
 
         project.pluginManager.withPlugin("com.android.base") {
             project.logger.info("[kmpgen] Configure plugin 'com.android.base'")
-            configureAndroid(project, generateAll, outputDirectory)
+            configureAndroid(project, generateAll)
         }
 
         project.afterEvaluate {
@@ -141,7 +136,7 @@ class KgenPlugin : Plugin<Project> {
         }
     }
 
-    private fun configureKotlinAndroid(project: Project, outputDirectory: Provider<Directory>) {
+    private fun configureKotlinAndroid(project: Project) {
         project.extensions.configure<KotlinAndroidProjectExtension> {
             compilerOptions {
                 optIn.add("kotlin.uuid.ExperimentalUuidApi")
@@ -175,26 +170,15 @@ class KgenPlugin : Plugin<Project> {
         }
     }
 
-    private fun configureAndroid(project: Project, generateAllTask: TaskProvider<KgenGenerateAllTask>, outputDirectory: Provider<Directory>) {
-        project.extensions.findByType(BaseExtension::class.java)?.apply {
-            sourceSets {
-                project.logger.info("[kmpgen] Configure AndroidSourceSet, add generated sources to 'main' srcDir")
-                named("main") {
-                    kotlin.srcDir(outputDirectory)
-                }
+    private fun configureAndroid(project: Project, generateAllTask: TaskProvider<KgenGenerateAllTask>) {
+        project.extensions.findByType(AndroidComponentsExtension::class.java)?.apply {
+            onVariants { variant ->
+                project.logger.info("[kmpgen] Configure Android variant '${variant.name}', add generated sources")
+                variant.sources.java?.addGeneratedSourceDirectory(
+                    generateAllTask,
+                    KgenGenerateAllTask::output
+                )
             }
         }
-//        project.extensions.findByType(AppExtension::class.java)?.apply {
-//            applicationVariants.configureEach {
-//                project.logger.info("[kmpgen] Configure AppExtension for applicationVariant '$name', add generated sources")
-//                registerJavaGeneratingTask(generateAllTask, outputDirectory.get().asFile)
-//            }
-//        }
-//        project.extensions.findByType(LibraryExtension::class.java)?.apply {
-//            libraryVariants.configureEach {
-//                project.logger.info("[kmpgen] Configure LibraryExtension for libraryVariant '$name', add generated sources")
-//                registerJavaGeneratingTask(generateAllTask, outputDirectory.get().asFile)
-//            }
-//        }
     }
 }
