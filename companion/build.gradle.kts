@@ -10,7 +10,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.vanniktech.mavenPublish)
 }
 
@@ -40,13 +40,21 @@ kotlin {
             jvmTarget = JvmTarget.JVM_11
         }
     }
-    androidTarget {
-        publishLibraryVariants("release")
+
+    android {
+        namespace = "com.kroegerama.openapi.kmp.gen.companion"
+        compileSdk = libs.versions.android.compileSdk.get().toInt()
+        minSdk = libs.versions.android.minSdk.get().toInt()
+        enableCoreLibraryDesugaring = true
+
         compilerOptions {
             moduleName = "kmp.gen.companion"
             jvmTarget = JvmTarget.JVM_11
         }
+
+        withHostTest { }
     }
+
     iosX64()
     iosArm64()
     iosSimulatorArm64()
@@ -84,19 +92,6 @@ kotlin {
         mingwMain.dependencies {
             api(libs.ktor.client.winhttp)
         }
-    }
-}
-
-android {
-    namespace = "com.kroegerama.openapi.kmp.gen.companion"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
-    defaultConfig {
-        minSdk = libs.versions.android.minSdk.get().toInt()
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-        isCoreLibraryDesugaringEnabled = true
     }
 }
 

@@ -36,12 +36,9 @@ jobs:
             os: macos-latest
           - target: mingwX64Test
             os: windows-latest
-          - target: testDebugUnitTest
-            os: ubuntu-latest
-          - target: testReleaseUnitTest
+          - target: testAndroidHostTest
             os: ubuntu-latest
     runs-on: ${{ matrix.os }}
-
     steps:
     - name: Check out code
       uses: actions/checkout@v4
