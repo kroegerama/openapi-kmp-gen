@@ -94,6 +94,11 @@ class KgenPlugin : Plugin<Project> {
             configureAndroid(project, generateAll)
         }
 
+        project.pluginManager.withPlugin("com.android.kotlin.multiplatform.library") {
+            project.logger.info("[kmpgen] Configure plugin 'com.android.kotlin.multiplatform.library'")
+            configureAndroid(project, generateAll)
+        }
+
         project.afterEvaluate {
             val hasSerializationPlugin = project.pluginManager.hasPlugin("org.jetbrains.kotlin.plugin.serialization")
             if (!hasSerializationPlugin) {
