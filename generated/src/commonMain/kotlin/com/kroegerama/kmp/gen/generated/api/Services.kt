@@ -5,9 +5,11 @@
  * Test API Description
  * Version 1.0.0-SNAPSHOT
  * 
- * Generated Mon, 6 Oct 2025 13:22:04 +0200
- * OpenAPI KMP Gen (version 1.0.0-alpha01) by kroegerama
+ * Generated Sun, 23 Nov 2025 14:04:33 +0100
+ * OpenAPI KMP Gen (version 1.0.0-rc02) by kroegerama
  */
+@file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
+
 package com.kroegerama.kmp.gen.generated.api
 
 import arrow.core.Either
@@ -32,6 +34,7 @@ import io.ktor.http.appendPathSegments
 import io.ktor.http.takeFrom
 import kotlin.Int
 import kotlin.String
+import kotlin.Suppress
 import kotlin.Unit
 
 public object DefaultApi {

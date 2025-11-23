@@ -57,7 +57,7 @@ tasks.register<JavaExec>("generate") {
     inputs.files("testspec.yaml")
 
     val shadowJar = fileTree("../cli/build/libs") {
-        include("**-shadow.jar")
+        include("**-$version-shadow.jar")
     }.singleFile
 
     classpath = files(shadowJar)
