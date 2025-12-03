@@ -3,6 +3,7 @@
 
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/kroegerama/openapi-kmp-gen/gradle.yml?style=flat)
 [![Maven Central Version](https://img.shields.io/maven-central/v/com.kroegerama.openapi-kmp-gen/companion?style=flat)](https://central.sonatype.com/search?namespace=com.kroegerama.openapi-kmp-gen)
+[![Gradle Plugin Portal Version](https://img.shields.io/gradle-plugin-portal/v/com.kroegerama.openapi-kmp-gen?style=flat)](https://plugins.gradle.org/plugin/com.kroegerama.openapi-kmp-gen)
 
 # OpenAPI KMP Gen
 
