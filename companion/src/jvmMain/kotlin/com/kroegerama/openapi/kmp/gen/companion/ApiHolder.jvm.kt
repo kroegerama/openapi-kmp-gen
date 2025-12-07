@@ -3,6 +3,7 @@ package com.kroegerama.openapi.kmp.gen.companion
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.utils.io.KtorDsl
 
 public actual val platformUserAgent: String = run {
     val osName = System.getProperty("os.name") ?: "unknown"
@@ -10,8 +11,9 @@ public actual val platformUserAgent: String = run {
     "okhttp/${okhttp3.OkHttp.VERSION} $osName/$osVersion"
 }
 
-internal actual fun createBaseClient(block: HttpClientConfig<*>.() -> Unit): HttpClient {
+@KtorDsl
+public actual fun createPlatformBaseClient(decorator: HttpClientConfig<*>.() -> Unit): HttpClient {
     return HttpClient(OkHttp) {
-        block()
+        decorator()
     }
 }

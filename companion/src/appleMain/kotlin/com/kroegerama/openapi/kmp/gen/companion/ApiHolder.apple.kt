@@ -3,14 +3,16 @@ package com.kroegerama.openapi.kmp.gen.companion
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.darwin.Darwin
+import io.ktor.utils.io.KtorDsl
 
-internal actual fun createBaseClient(block: HttpClientConfig<*>.() -> Unit): HttpClient {
+@KtorDsl
+public actual fun createPlatformBaseClient(decorator: HttpClientConfig<*>.() -> Unit): HttpClient {
     return HttpClient(Darwin) {
         engine {
             configureRequest {
                 setAllowsCellularAccess(true)
             }
         }
-        block()
+        decorator()
     }
 }

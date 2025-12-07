@@ -26,24 +26,30 @@ public abstract class ApiHolder {
         updateClient()
     }
 
+    public open fun HttpClientConfig<*>.apiConfig() {
+        install(ContentNegotiation) {
+            json(json)
+        }
+        install(DefaultRequest) {
+            url.takeFrom(baseUrl)
+        }
+        install(AuthPlugin) {
+            authItem { key ->
+                authProviderMap[key]?.invoke()
+            }
+        }
+    }
+
     public fun updateClient(
         json: Json = createDefaultJson(),
-        clientDecorator: HttpClientConfig<*>.() -> Unit = {}
+        createBaseClient: (decorator: HttpClientConfig<*>.() -> Unit) -> HttpClient = ::createPlatformBaseClient,
+        decorator: HttpClientConfig<*>.() -> Unit = {}
     ) {
         this.json = json
-        client = createDefaultHttpClient {
-            install(ContentNegotiation) {
-                json(json)
-            }
-            install(DefaultRequest) {
-                url.takeFrom(baseUrl)
-            }
-            install(AuthPlugin) {
-                authItem { key ->
-                    authProviderMap[key]?.invoke()
-                }
-            }
-            clientDecorator()
+        client = createBaseClient {
+            defaultConfig()
+            apiConfig()
+            decorator()
         }
     }
 

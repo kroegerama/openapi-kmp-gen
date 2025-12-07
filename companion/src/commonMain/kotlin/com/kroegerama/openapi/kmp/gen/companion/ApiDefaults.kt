@@ -8,6 +8,7 @@ import io.ktor.client.plugins.compression.ContentEncoding
 import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.http.HttpHeaders
+import io.ktor.utils.io.KtorDsl
 import kotlinx.serialization.json.Json
 
 public fun createDefaultJson(): Json = Json {
@@ -22,9 +23,7 @@ public fun createDefaultJson(): Json = Json {
     allowSpecialFloatingPointValues = true
 }
 
-public fun createDefaultHttpClient(
-    decorator: HttpClientConfig<*>.() -> Unit = {}
-): HttpClient = createBaseClient {
+public fun HttpClientConfig<*>.defaultConfig() {
     expectSuccess = true
     install(HttpCookies)
     install(UserAgent) {
@@ -36,8 +35,8 @@ public fun createDefaultHttpClient(
     install(Logging) {
         sanitizeHeader { header -> header == HttpHeaders.Authorization }
     }
-    decorator()
 }
 
-internal expect fun createBaseClient(block: HttpClientConfig<*>.() -> Unit = {}): HttpClient
+@KtorDsl
+public expect fun createPlatformBaseClient(decorator: HttpClientConfig<*>.() -> Unit = {}): HttpClient
 public expect val platformUserAgent: String
