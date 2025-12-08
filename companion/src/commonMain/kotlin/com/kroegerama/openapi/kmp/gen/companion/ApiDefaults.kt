@@ -5,6 +5,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.compression.ContentEncoding
+import io.ktor.client.plugins.compression.ContentEncodingConfig
 import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.http.HttpHeaders
@@ -23,20 +24,39 @@ public fun createDefaultJson(): Json = Json {
     allowSpecialFloatingPointValues = true
 }
 
-public fun HttpClientConfig<*>.defaultConfig() {
+public val defaultUserAgent: String
+    get() = "ktor/${BuildConfig.KTOR} kmp-gen/${BuildConfig.COMPANION} $platformUserAgent"
+
+public fun HttpClientConfig<*>.defaultConfig(
+    userAgent: String? = defaultUserAgent,
+    withCookies: Boolean = false,
+    withContentEncoding: Boolean = false,
+    withLogging: Boolean = false
+) {
     expectSuccess = true
-    install(HttpCookies)
-    install(UserAgent) {
-        agent = "ktor/${BuildConfig.KTOR} kmp-gen/${BuildConfig.COMPANION} $platformUserAgent"
+    if (userAgent != null) {
+        install(UserAgent) {
+            agent = userAgent
+        }
     }
-    install(ContentEncoding) {
-        gzip()
+    if (withCookies) {
+        install(HttpCookies)
     }
-    install(Logging) {
-        sanitizeHeader { header -> header == HttpHeaders.Authorization }
+    if (withContentEncoding) {
+        install(ContentEncoding) {
+            mode = ContentEncodingConfig.Mode.All
+            gzip(1f)
+            deflate(0.5f)
+            identity(0f)
+        }
+    }
+    if (withLogging) {
+        install(Logging) {
+            sanitizeHeader { header -> header == HttpHeaders.Authorization }
+        }
     }
 }
 
 @KtorDsl
-public expect fun createPlatformBaseClient(decorator: HttpClientConfig<*>.() -> Unit = {}): HttpClient
+public expect fun createPlatformHttpClient(decorator: HttpClientConfig<*>.() -> Unit = {}): HttpClient
 public expect val platformUserAgent: String

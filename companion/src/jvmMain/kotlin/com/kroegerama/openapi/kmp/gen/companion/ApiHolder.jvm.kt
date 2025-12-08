@@ -12,7 +12,7 @@ public actual val platformUserAgent: String = run {
 }
 
 @KtorDsl
-public actual fun createPlatformBaseClient(decorator: HttpClientConfig<*>.() -> Unit): HttpClient {
+public actual fun createPlatformHttpClient(decorator: HttpClientConfig<*>.() -> Unit): HttpClient {
     return HttpClient(OkHttp) {
         decorator()
     }

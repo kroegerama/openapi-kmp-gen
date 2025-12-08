@@ -36,7 +36,7 @@ public actual val platformUserAgent: String = memScoped {
 }
 
 @KtorDsl
-public actual fun createPlatformBaseClient(decorator: HttpClientConfig<*>.() -> Unit): HttpClient {
+public actual fun createPlatformHttpClient(decorator: HttpClientConfig<*>.() -> Unit): HttpClient {
     return HttpClient(WinHttp) {
         decorator()
     }

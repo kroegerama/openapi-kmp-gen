@@ -42,12 +42,21 @@ public abstract class ApiHolder {
 
     public fun updateClient(
         json: Json = createDefaultJson(),
-        createBaseClient: (decorator: HttpClientConfig<*>.() -> Unit) -> HttpClient = ::createPlatformBaseClient,
+        userAgent: String? = defaultUserAgent,
+        withCookies: Boolean = false,
+        withCompression: Boolean = false,
+        withLogging: Boolean = false,
+        createHttpClient: (decorator: HttpClientConfig<*>.() -> Unit) -> HttpClient = ::createPlatformHttpClient,
         decorator: HttpClientConfig<*>.() -> Unit = {}
     ) {
         this.json = json
-        client = createBaseClient {
-            defaultConfig()
+        client = createHttpClient {
+            defaultConfig(
+                withCookies = withCookies,
+                userAgent = userAgent,
+                withContentEncoding = withCompression,
+                withLogging = withLogging
+            )
             apiConfig()
             decorator()
         }
