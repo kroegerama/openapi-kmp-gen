@@ -93,6 +93,9 @@ kotlin {
         mingwMain.dependencies {
             api(libs.ktor.client.winhttp)
         }
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
     }
 }
 

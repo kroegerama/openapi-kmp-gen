@@ -1,29 +1,30 @@
 [versions]
 agp = "8.13.2"
-kotlin = "2.2.21"
+kotlin = "2.3.0"
 android-minSdk = "21"
 android-compileSdk = "36"
 vanniktechMavenPublish = "0.35.0"
 coroutines = "1.10.2"
 ktor = "3.3.3"
 serialization = "1.9.0"
-arrow = "2.2.0"
+arrow = "2.2.1.1"
 compose = "1.10.0"
 datetime = "0.7.1"
 desugar = "2.1.5"
-shadow = "9.2.2"
+shadow = "9.3.0"
 airline = "0.9"
 guava = "33.5.0-jre"
 kotlinpoet = "2.2.0"
-swagger-parser = "2.1.36"
+swagger-parser = "2.1.37"
 gradle-publish = "2.0.0"
 versions = "0.53.0"
 slf4f = "2.0.17"
 logback-android = "3.0.0"
-logback-classic = "1.5.21"
+logback-classic = "1.5.23"
 
 [libraries]
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
