@@ -36,11 +36,21 @@ class KgenPlugin : Plugin<Project> {
             output.set(outputDirectory)
         }
 
+        val specTasks = extension.specs.map spec@{
+            val taskName = Constants.TASK_NAME_PREPARE_PREFIX + it.name
+            project.tasks.register<KgenTask>(taskName) {
+                group = Constants.TASK_GROUP
+                description = Constants.TASK_DESCRIPTION
+                dependsOn(prepareTask)
+                setProperties(extension, it, outputDirectory)
+            }
+        }
+
         val generateAll = project.tasks.register<KgenGenerateAllTask>(Constants.TASK_NAME_PREPARE_ALL) {
             group = Constants.TASK_GROUP
             description = Constants.TASK_DESCRIPTION
             output.set(outputDirectory)
-            dependsOn(project.tasks.withType<KgenTask>())
+            dependsOn(specTasks)
         }
 
         project.tasks.withType<Jar>().configureEach {
@@ -57,16 +67,6 @@ class KgenPlugin : Plugin<Project> {
 
         project.tasks.withType<KotlinCompileCommon>().configureEach {
             dependsOn(generateAll)
-        }
-
-        extension.specs.all spec@{
-            val taskName = Constants.TASK_NAME_PREPARE_PREFIX + name
-            project.tasks.register<KgenTask>(taskName) {
-                group = Constants.TASK_GROUP
-                description = Constants.TASK_DESCRIPTION
-                dependsOn(prepareTask)
-                setProperties(extension, this@spec, outputDirectory)
-            }
         }
 
         project.pluginManager.withPlugin("idea") {
@@ -179,7 +179,7 @@ class KgenPlugin : Plugin<Project> {
         project.extensions.findByType(AndroidComponentsExtension::class.java)?.apply {
             onVariants { variant ->
                 project.logger.info("[kmpgen] Configure Android variant '${variant.name}', add generated sources")
-                variant.sources.java?.addGeneratedSourceDirectory(
+                variant.sources.java!!.addGeneratedSourceDirectory(
                     generateAllTask,
                     KgenGenerateAllTask::output
                 )
