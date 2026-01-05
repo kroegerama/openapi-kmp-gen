@@ -1,6 +1,7 @@
 package com.kroegerama.openapi.kmp.gen.plugin
 
 import com.android.build.api.variant.AndroidComponentsExtension
+import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.kroegerama.openapi.kmp.gen.BuildConfig
 import com.kroegerama.openapi.kmp.gen.Constants
 import org.gradle.api.GradleException
@@ -36,21 +37,21 @@ class KgenPlugin : Plugin<Project> {
             output.set(outputDirectory)
         }
 
-        val specTasks = extension.specs.map spec@{
-            val taskName = Constants.TASK_NAME_PREPARE_PREFIX + it.name
-            project.tasks.register<KgenTask>(taskName) {
-                group = Constants.TASK_GROUP
-                description = Constants.TASK_DESCRIPTION
-                dependsOn(prepareTask)
-                setProperties(extension, it, outputDirectory)
-            }
-        }
-
         val generateAll = project.tasks.register<KgenGenerateAllTask>(Constants.TASK_NAME_PREPARE_ALL) {
             group = Constants.TASK_GROUP
             description = Constants.TASK_DESCRIPTION
             output.set(outputDirectory)
-            dependsOn(specTasks)
+        }
+
+        extension.specs.all spec@{
+            val taskName = Constants.TASK_NAME_PREPARE_PREFIX + name
+            val task = project.tasks.register<KgenTask>(taskName) {
+                group = Constants.TASK_GROUP
+                description = Constants.TASK_DESCRIPTION
+                dependsOn(prepareTask)
+                setProperties(extension, this@spec, outputDirectory)
+            }
+            generateAll.dependsOn(task)
         }
 
         project.tasks.withType<Jar>().configureEach {
