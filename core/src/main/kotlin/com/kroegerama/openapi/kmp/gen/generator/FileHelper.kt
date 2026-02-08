@@ -1,6 +1,7 @@
 package com.kroegerama.openapi.kmp.gen.generator
 
 import com.kroegerama.openapi.kmp.gen.Constants
+import com.kroegerama.openapi.kmp.gen.Logger
 import com.kroegerama.openapi.kmp.gen.OptionSet
 import com.kroegerama.openapi.kmp.gen.asMultilineComment
 import com.squareup.kotlinpoet.FileSpec
@@ -10,7 +11,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 class FileHelper(
-    private val options: OptionSet
+    private val options: OptionSet,
+    private val logger: Logger
 ) {
 
     private val outputDir = run {
@@ -27,7 +29,7 @@ class FileHelper(
     }
 
     fun writeFileSpec(fileSpec: FileSpec) {
-        println("Writing ${fileSpec.packageName} ${fileSpec.name}")
+        logger.lifecycle("writing ${fileSpec.packageName} ${fileSpec.name}")
 
         val outputPath = outputDir.toPath()
 

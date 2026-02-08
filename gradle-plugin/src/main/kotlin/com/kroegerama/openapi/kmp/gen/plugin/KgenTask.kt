@@ -1,5 +1,6 @@
 package com.kroegerama.openapi.kmp.gen.plugin
 
+import com.kroegerama.openapi.kmp.gen.Logger
 import com.kroegerama.openapi.kmp.gen.OptionSet
 import com.kroegerama.openapi.kmp.gen.generator.Generator
 import org.gradle.api.DefaultTask
@@ -10,7 +11,14 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.SetProperty
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 
 @CacheableTask
 abstract class KgenTask : DefaultTask() {
@@ -41,10 +49,6 @@ abstract class KgenTask : DefaultTask() {
     @get:Optional
     abstract val allowParseErrors: Property<Boolean>
 
-    @get:Input
-    @get:Optional
-    abstract val verbose: Property<Boolean>
-
     internal fun setProperties(extension: KgenExtension, info: SpecInfo, outputFolder: Provider<Directory>) {
         specFile.set(info.specFile)
         specUri.set(info.specUri)
@@ -53,7 +57,6 @@ abstract class KgenTask : DefaultTask() {
         limitApis.set(info.limitApis)
         generateAllNamedSchemas.set(info.generateAllNamedSchemas)
         allowParseErrors.set(info.allowParseErrors)
-        verbose.set(info.verbose)
     }
 
     @TaskAction
@@ -90,9 +93,16 @@ abstract class KgenTask : DefaultTask() {
             limitApis = limitApis.get(),
             generateAllNamedSchemas = generateAllNamedSchemas.get(),
             allowParseErrors = allowParseErrors.get(),
-            outputDirIsSrcDir = true,
-            verbose = verbose.get()
+            outputDirIsSrcDir = true
         )
-        Generator(options).generate()
+        val logger = object : Logger {
+            override fun info(message: String) = logger.info(message)
+            override fun lifecycle(message: String) = logger.lifecycle(message)
+            override fun error(message: String) = logger.error(message)
+        }
+        Generator(
+            options = options,
+            logger = logger
+        ).generate()
     }
 }

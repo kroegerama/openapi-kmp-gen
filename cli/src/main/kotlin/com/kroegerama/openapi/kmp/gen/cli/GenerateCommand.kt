@@ -1,6 +1,7 @@
 package com.kroegerama.openapi.kmp.gen.cli
 
 import com.kroegerama.openapi.kmp.gen.Constants
+import com.kroegerama.openapi.kmp.gen.Logger
 import com.kroegerama.openapi.kmp.gen.OptionSet
 import com.kroegerama.openapi.kmp.gen.generator.Generator
 import io.airlift.airline.Arguments
@@ -70,9 +71,16 @@ class GenerateCommand : Runnable {
             limitApis = limitApis.split(",").filter { it.isNotBlank() }.toSet(),
             generateAllNamedSchemas = generateAllNamedSchemas,
             allowParseErrors = allowParseErrors,
-            outputDirIsSrcDir = outputDirIsSrcDir,
-            verbose = verbose
+            outputDirIsSrcDir = outputDirIsSrcDir
         )
-        Generator(options).generate()
+        val logger = object : Logger {
+            override fun info(message: String) = if (verbose) println(message) else Unit
+            override fun lifecycle(message: String) = println(message)
+            override fun error(message: String) = System.err.println(message)
+        }
+        Generator(
+            options = options,
+            logger = logger
+        ).generate()
     }
 }

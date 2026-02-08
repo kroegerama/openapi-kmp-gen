@@ -1,5 +1,6 @@
 package com.kroegerama.openapi.kmp.gen.spec
 
+import com.kroegerama.openapi.kmp.gen.Logger
 import com.kroegerama.openapi.kmp.gen.OptionSet
 import io.swagger.parser.OpenAPIParser
 import io.swagger.v3.oas.models.OpenAPI
@@ -9,17 +10,18 @@ import io.swagger.v3.oas.models.Paths
 import io.swagger.v3.oas.models.media.MediaType
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters.Parameter
-import java.util.*
+import java.util.IdentityHashMap
 
 class SpecParser(
     private val specFile: String,
-    private val options: OptionSet
+    private val options: OptionSet,
+    private val logger: Logger
 ) {
     fun parseAndResolve(): OpenAPI {
         val result = OpenAPIParser().readLocation(specFile, emptyList(), SpecConfig.parseOptions)
         if (!options.allowParseErrors && (!result.messages.isNullOrEmpty() || result.openAPI == null)) {
             result.messages?.forEach { message ->
-                System.err.println(message)
+                logger.error(message)
             }
             throw IllegalStateException("Cannot parse spec $specFile")
         }
@@ -227,9 +229,7 @@ class SpecParser(
             }
         }
         removeSchemas.forEach { name ->
-            if (options.verbose) {
-                println("remove unused schema '$name'")
-            }
+            logger.info("remove unused schema '$name'")
             components?.schemas?.remove(name)
         }
     }

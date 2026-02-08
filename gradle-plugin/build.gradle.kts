@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
-    `kotlin-dsl`
+    alias(libs.plugins.kotlinJvm)
     alias(libs.plugins.gradle.publish)
     alias(libs.plugins.vanniktech.mavenPublish)
 }
@@ -42,7 +42,7 @@ mavenPublishing {
 
 gradlePlugin {
     plugins {
-        create("kmpgenPlugin") {
+        register("kmpgenPlugin") {
             id = "com.kroegerama.openapi-kmp-gen"
             implementationClass = "com.kroegerama.openapi.kmp.gen.plugin.KgenPlugin"
             displayName = C.PROJECT_NAME

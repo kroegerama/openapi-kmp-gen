@@ -1,5 +1,6 @@
 package com.kroegerama.openapi.kmp.gen.generator
 
+import com.kroegerama.openapi.kmp.gen.Logger
 import com.kroegerama.openapi.kmp.gen.OptionSet
 import com.kroegerama.openapi.kmp.gen.poet.PoetGenerator
 import com.kroegerama.openapi.kmp.gen.spec.SpecConverter
@@ -7,17 +8,21 @@ import com.kroegerama.openapi.kmp.gen.spec.SpecModel
 import com.kroegerama.openapi.kmp.gen.spec.SpecParser
 
 class Generator(
-    private val options: OptionSet
+    private val options: OptionSet,
+    private val logger: Logger
 ) {
 
     fun generate() {
-        println("Selected options: $options")
-        println()
+        logger.lifecycle("selected options: $options")
 
-        val fileHelper = FileHelper(options)
+        val fileHelper = FileHelper(
+            options = options,
+            logger = logger
+        )
         val spec = SpecParser(
             specFile = options.specFile,
-            options = options
+            options = options,
+            logger = logger
         ).parseAndResolve()
 
         val specModel = SpecConverter(
@@ -25,9 +30,7 @@ class Generator(
             options = options
         ).convert()
 
-        if (options.verbose) {
-            printSpecModel(specModel)
-        }
+        printSpecModel(specModel)
 
         fileHelper.prepare()
 
@@ -40,38 +43,34 @@ class Generator(
     }
 
     private fun printSpecModel(specModel: SpecModel) {
-        println("# Metadata #")
-        println(specModel.metadata)
-        println()
+        logger.info("# Metadata #")
+        logger.info(specModel.metadata.toString())
 
-        println("# SecuritySchemes #")
+        logger.info("# SecuritySchemes #")
         if (specModel.securitySchemes.isEmpty()) {
-            println("\t(none)")
+            logger.info("\t(none)")
         }
         specModel.securitySchemes.forEach { securityScheme ->
-            println("\t- $securityScheme")
+            logger.info("\t- $securityScheme")
         }
-        println()
 
-        println("# APIs #")
+        logger.info("# APIs #")
         if (specModel.apis.isEmpty()) {
-            println("\t(none)")
+            logger.info("\t(none)")
         }
         specModel.apis.forEach { api ->
-            println(api.name)
+            logger.info(api.name)
             api.operations.forEach { operation ->
-                println("\t- $operation")
+                logger.info("\t- $operation")
             }
         }
-        println()
 
-        println("# Schemas #")
+        logger.info("# Schemas #")
         if (specModel.schemas.isEmpty()) {
-            println("\t(none)")
+            logger.info("\t(none)")
         }
         specModel.schemas.forEach { schema ->
-            println("\t- $schema")
+            logger.info("\t- $schema")
         }
-        println()
     }
 }
