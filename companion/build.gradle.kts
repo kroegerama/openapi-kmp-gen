@@ -52,6 +52,11 @@ kotlin {
             jvmTarget = JvmTarget.JVM_11
         }
 
+        optimization {
+            consumerKeepRules.publish = true
+            consumerKeepRules.file("consumer-proguard-rules.pro")
+        }
+
         withHostTest { }
     }
 
