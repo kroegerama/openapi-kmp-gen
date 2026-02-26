@@ -5,8 +5,8 @@
  * Test API Description
  * Version 1.0.0-SNAPSHOT
  * 
- * Generated Sun, 23 Nov 2025 14:04:33 +0100
- * OpenAPI KMP Gen (version 1.0.0-rc02) by kroegerama
+ * Generated Thu, 26 Feb 2026 13:42:55 +0100
+ * OpenAPI KMP Gen (version 1.1.1) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 

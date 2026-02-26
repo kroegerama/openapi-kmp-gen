@@ -5,8 +5,8 @@
  * Test API Description
  * Version 1.0.0-SNAPSHOT
  * 
- * Generated Sun, 23 Nov 2025 14:04:33 +0100
- * OpenAPI KMP Gen (version 1.0.0-rc02) by kroegerama
+ * Generated Thu, 26 Feb 2026 13:42:55 +0100
+ * OpenAPI KMP Gen (version 1.1.1) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
@@ -20,6 +20,10 @@ import kotlin.Int
 import kotlin.Long
 import kotlin.String
 import kotlin.Suppress
+import kotlin.collections.List
+import kotlin.collections.Map
+import kotlin.collections.emptyList
+import kotlin.collections.emptyMap
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import kotlinx.datetime.LocalDate
@@ -85,4 +89,17 @@ public data class NumberTest(
   public val int32: Int? = null,
   @SerialName("int64")
   public val int64: Long? = null,
+)
+
+@Serializable
+@Immutable
+public data class DefaultValue(
+  @SerialName("nullableString")
+  public val nullableString: String? = null,
+  @SerialName("nullableList")
+  public val nullableList: List<String>? = null,
+  @SerialName("requiredList")
+  public val requiredList: List<String> = emptyList(),
+  @SerialName("requiredMap")
+  public val requiredMap: Map<String, String> = emptyMap(),
 )

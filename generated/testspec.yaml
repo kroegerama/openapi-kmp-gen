@@ -79,15 +79,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NumberTest'
+  /defaultValue:
+    get:
+      operationId: defaultValue
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefaultValue'
   /multipart:
     servers:
       - url: https://example.com
     post:
       operationId: multipart
       security:
-        - BasicAuth: []
-        - TokenAuth: []
-        - APIKeyAuth: []
+        - BasicAuth: [ ]
+        - TokenAuth: [ ]
+        - APIKeyAuth: [ ]
       requestBody:
         content:
           multipart/form-data:
@@ -102,9 +112,9 @@ paths:
     post:
       operationId: urlEncoded
       security:
-        - BearerAuth: []
-        - TokenAuth: []
-        - APIKeyAuth: []
+        - BearerAuth: [ ]
+        - TokenAuth: [ ]
+        - APIKeyAuth: [ ]
       requestBody:
         content:
           application/x-www-form-urlencoded:
@@ -197,3 +207,23 @@ components:
         int64:
           type: number
           format: int64
+    DefaultValue:
+      type: object
+      required:
+        - requiredList
+        - requiredMap
+      properties:
+        nullableString:
+          type: string
+        nullableList:
+          type: array
+          items:
+            type: string
+        requiredList:
+          type: array
+          items:
+            type: string
+        requiredMap:
+          type: object
+          additionalProperties:
+            type: string

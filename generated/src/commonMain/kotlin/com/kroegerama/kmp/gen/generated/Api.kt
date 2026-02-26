@@ -5,8 +5,8 @@
  * Test API Description
  * Version 1.0.0-SNAPSHOT
  * 
- * Generated Sun, 23 Nov 2025 14:04:33 +0100
- * OpenAPI KMP Gen (version 1.0.0-rc02) by kroegerama
+ * Generated Thu, 26 Feb 2026 13:42:55 +0100
+ * OpenAPI KMP Gen (version 1.1.1) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
@@ -26,7 +26,7 @@ public object Api : ApiHolder() {
 
   public const val version: String = "1.0.0-SNAPSHOT"
 
-  public const val createdAt: String = "2025-11-23T14:04:33+01:00"
+  public const val createdAt: String = "2026-02-26T13:42:55+01:00"
 
   public val servers: List<Url> = listOf(
     Url("https://jsonplaceholder.typicode.com/"),

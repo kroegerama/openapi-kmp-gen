@@ -5,8 +5,8 @@
  * Test API Description
  * Version 1.0.0-SNAPSHOT
  * 
- * Generated Sun, 23 Nov 2025 14:04:33 +0100
- * OpenAPI KMP Gen (version 1.0.0-rc02) by kroegerama
+ * Generated Thu, 26 Feb 2026 13:42:55 +0100
+ * OpenAPI KMP Gen (version 1.1.1) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
@@ -15,6 +15,7 @@ package com.kroegerama.kmp.gen.generated.api
 import arrow.core.Either
 import com.kroegerama.kmp.gen.generated.Api
 import com.kroegerama.kmp.gen.generated.Auth
+import com.kroegerama.kmp.gen.generated.models.DefaultValue
 import com.kroegerama.kmp.gen.generated.models.IntegerTest
 import com.kroegerama.kmp.gen.generated.models.NumberTest
 import com.kroegerama.kmp.gen.generated.models.Photo
@@ -106,6 +107,19 @@ public object DefaultApi {
     method = HttpMethod.parse("GET")
     url.appendPathSegments(
       "numberTest",
+    )
+    decorator()
+  }
+
+  /**
+   * `GET /defaultValue`
+   *
+   * @return OK
+   */
+  public suspend fun defaultValue(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<DefaultValue>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("GET")
+    url.appendPathSegments(
+      "defaultValue",
     )
     decorator()
   }
