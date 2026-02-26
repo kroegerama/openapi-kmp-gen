@@ -337,8 +337,10 @@ class PoetGenerator(
 
     private fun createParameter(parameter: SpecParameter): ParameterSpec {
         return poetParameter(parameter.name, convertSimpleType(parameter.schema).nullable(parameter.nullable)) {
-            if (parameter.nullable) {
-                defaultValue("null")
+            when {
+                parameter.nullable -> defaultValue("null")
+                parameter.schema is SpecSchema.Array -> defaultValue("%M()", PoetMembers.EmptyList)
+                parameter.schema is SpecSchema.Map -> defaultValue("%M()", PoetMembers.EmptyMap)
             }
             parameter.description?.let {
                 addKdoc("%L", it)
@@ -346,47 +348,38 @@ class PoetGenerator(
         }
     }
 
+    private fun ParameterSpec.Builder.handleSchemaInfo(info: SpecOperation.SchemaInfo) {
+        when {
+            info.nullable -> defaultValue("null")
+            info.type is SpecSchema.Array -> defaultValue("%M()", PoetMembers.EmptyList)
+            info.type is SpecSchema.Map -> defaultValue("%M()", PoetMembers.EmptyMap)
+        }
+        info.description?.let {
+            addKdoc("%L", it)
+        }
+    }
+
     private fun createMultipartBodyParameter(info: SpecOperation.SchemaInfo): ParameterSpec {
         return poetParameter("body", PoetTypes.MultiPartFormDataContent.nullable(info.nullable)) {
-            if (info.nullable) {
-                defaultValue("null")
-            }
-            info.description?.let {
-                addKdoc("%L", it)
-            }
+            handleSchemaInfo(info)
         }
     }
 
     private fun createUrlEncodedBodyParameter(info: SpecOperation.SchemaInfo): ParameterSpec {
         return poetParameter("body", PoetTypes.FormDataContent.nullable(info.nullable)) {
-            if (info.nullable) {
-                defaultValue("null")
-            }
-            info.description?.let {
-                addKdoc("%L", it)
-            }
+            handleSchemaInfo(info)
         }
     }
 
     private fun createAnyBodyParameter(info: SpecOperation.SchemaInfo): ParameterSpec {
         return poetParameter("body", ANY.nullable(info.nullable)) {
-            if (info.nullable) {
-                defaultValue("null")
-            }
-            info.description?.let {
-                addKdoc("%L", it)
-            }
+            handleSchemaInfo(info)
         }
     }
 
     private fun createBodyParameter(info: SpecOperation.SchemaInfo): ParameterSpec {
         return poetParameter("body", convertSimpleType(info.type).nullable(info.nullable)) {
-            if (info.nullable) {
-                defaultValue("null")
-            }
-            info.description?.let {
-                addKdoc("%L", it)
-            }
+            handleSchemaInfo(info)
         }
     }
 
@@ -415,7 +408,7 @@ class PoetGenerator(
                             returns(PoetTypes.AuthItem.nullable())
                             addStatement("return getBasic()")
                         }
-                        primaryConstructor(getBasic)
+                        primaryConstructor(getBasic) { }
                         addProperty(key)
                         addFunction(provideAuthItem)
                     }
@@ -438,7 +431,7 @@ class PoetGenerator(
                             returns(PoetTypes.AuthItem.nullable())
                             addStatement("return getBearer()")
                         }
-                        primaryConstructor(getBearer)
+                        primaryConstructor(getBearer) { }
                         addProperty(key)
                         addFunction(provideAuthItem)
                     }
@@ -478,7 +471,7 @@ class PoetGenerator(
                                 }
                             )
                         }
-                        primaryConstructor(getValue)
+                        primaryConstructor(getValue) { }
                         addProperty(key)
                         addFunction(provideAuthItem)
                     }
@@ -537,7 +530,14 @@ class PoetGenerator(
                             addAnnotation(serialName(serialName))
                         }
                         val properties: Array<PropertySpec> = schema.properties.map(::convertSpecProperty).toTypedArray()
-                        primaryConstructor(*properties)
+                        primaryConstructor(*properties) { idx ->
+                            val prop = schema.properties[idx]
+                            when {
+                                prop.nullable -> defaultValue("null")
+                                prop.type is SpecSchema.Array -> defaultValue("%M()", PoetMembers.EmptyList)
+                                prop.type is SpecSchema.Map -> defaultValue("%M()", PoetMembers.EmptyMap)
+                            }
+                        }
                         addTypes(inner(schema.children))
 
                         specModel.modelInterfaces[schema.typeNames]?.let { interfaces ->

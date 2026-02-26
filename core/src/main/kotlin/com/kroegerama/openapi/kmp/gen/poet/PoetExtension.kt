@@ -1,6 +1,15 @@
 package com.kroegerama.openapi.kmp.gen.poet
 
-import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.AnnotationSpec
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.PropertySpec
+import com.squareup.kotlinpoet.TypeAliasSpec
+import com.squareup.kotlinpoet.TypeName
+import com.squareup.kotlinpoet.TypeSpec
 import kotlin.reflect.KClass
 
 fun poetFile(packageName: String, fileName: String, block: FileSpec.Builder.() -> Unit) =
@@ -30,7 +39,7 @@ fun poetConstructor(block: FunSpec.Builder.() -> Unit) =
 fun poetAnnotation(className: ClassName, block: AnnotationSpec.Builder.() -> Unit) =
     AnnotationSpec.builder(className).apply(block).build()
 
-fun poetCompanionObject(name: String?=null, block: TypeSpec.Builder.() -> Unit) =
+fun poetCompanionObject(name: String? = null, block: TypeSpec.Builder.() -> Unit) =
     TypeSpec.companionObjectBuilder(name).apply(block).build()
 
 fun poetParameter(
@@ -59,11 +68,14 @@ fun TypeName.nullable(nullable: Boolean = true) =
 
 fun TypeName.notNull() = nullable(false)
 
-fun TypeSpec.Builder.primaryConstructor(vararg properties: PropertySpec): TypeSpec.Builder {
+fun TypeSpec.Builder.primaryConstructor(
+    vararg properties: PropertySpec,
+    decorateParameter: ParameterSpec.Builder.(Int) -> Unit
+): TypeSpec.Builder {
     val propertySpecs = properties.map { p -> p.toBuilder().initializer(p.name).build() }
-    val parameters = propertySpecs.map {
-        ParameterSpec.builder(it.name, it.type).apply {
-            if (it.type.isNullable) defaultValue("null")
+    val parameters = propertySpecs.mapIndexed { index, spec ->
+        ParameterSpec.builder(spec.name, spec.type).apply {
+            decorateParameter(index)
         }.build()
     }
     val constructor = FunSpec.constructorBuilder()

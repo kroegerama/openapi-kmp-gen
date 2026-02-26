@@ -83,4 +83,6 @@ object PoetMembers {
     val TakeFrom = MemberName(KTOR_HTTP_PACKAGE, "takeFrom")
     val RequestSetBody = MemberName(KTOR_CLIENT_REQUEST_PACKAGE, "setBody")
     val ContentType = MemberName(KTOR_HTTP_PACKAGE, "contentType")
+    val EmptyList = MemberName("kotlin.collections", "emptyList")
+    val EmptyMap = MemberName("kotlin.collections", "emptyMap")
 }
