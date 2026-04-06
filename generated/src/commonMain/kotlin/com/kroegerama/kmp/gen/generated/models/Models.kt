@@ -5,8 +5,8 @@
  * Test API Description
  * Version 1.0.0-SNAPSHOT
  * 
- * Generated Thu, 26 Feb 2026 13:42:55 +0100
- * OpenAPI KMP Gen (version 1.1.1) by kroegerama
+ * Generated Mon, 6 Apr 2026 18:24:05 +0200
+ * OpenAPI KMP Gen (version 1.3.0) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
@@ -30,6 +30,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonClassDiscriminator
 
 @Serializable
 @Immutable
@@ -103,3 +104,62 @@ public data class DefaultValue(
   @SerialName("requiredMap")
   public val requiredMap: Map<String, String> = emptyMap(),
 )
+
+@Serializable
+@Immutable
+public enum class SealedClassType {
+  @SerialName("C1")
+  C_1,
+  @SerialName("C2")
+  C_2,
+}
+
+@Serializable
+@Immutable
+@JsonClassDiscriminator("#discriminator")
+public sealed interface SealedClass1
+
+@Serializable
+@Immutable
+@SerialName("C1")
+public data class SealedClass1Child1(
+  @SerialName("commonAttr")
+  public val commonAttr: String? = null,
+  @SerialName("child1Only")
+  public val child1Only: Long? = null,
+) : SealedClass1
+
+@Serializable
+@Immutable
+@SerialName("C2")
+public data class SealedClass1Child2(
+  @SerialName("commonAttr")
+  public val commonAttr: String? = null,
+  @SerialName("child2Only")
+  public val child2Only: String? = null,
+) : SealedClass1
+
+@Serializable
+@Immutable
+@JsonClassDiscriminator("#discriminator")
+public sealed interface SealedClass2
+
+@Serializable
+@Immutable
+@SerialName("C1")
+public data class SealedClass2Child1(
+  @SerialName("commonAttr")
+  public val commonAttr: String? = null,
+  @SerialName("child1Only")
+  public val child1Only: Long? = null,
+) : SealedClass2
+
+@Serializable
+@Immutable
+@SerialName("C2")
+public data class SealedClass2Child2(
+  @SerialName("commonAttr")
+  public val commonAttr: String? = null,
+  @SerialName("child2Only")
+  public val child2Only: String? = null,
+) : SealedClass2

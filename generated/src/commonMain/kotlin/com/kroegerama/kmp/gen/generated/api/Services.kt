@@ -5,8 +5,8 @@
  * Test API Description
  * Version 1.0.0-SNAPSHOT
  * 
- * Generated Thu, 26 Feb 2026 13:42:55 +0100
- * OpenAPI KMP Gen (version 1.1.1) by kroegerama
+ * Generated Mon, 6 Apr 2026 18:24:05 +0200
+ * OpenAPI KMP Gen (version 1.3.0) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
@@ -30,13 +30,20 @@ import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.http.appendPathSegments
+import io.ktor.http.contentType
 import io.ktor.http.takeFrom
 import kotlin.Int
+import kotlin.Long
 import kotlin.String
 import kotlin.Suppress
 import kotlin.Unit
+import kotlin.collections.List
+import kotlin.collections.Map
+import kotlin.collections.emptyList
+import kotlin.collections.emptyMap
 
 public object DefaultApi {
   /**
@@ -121,6 +128,36 @@ public object DefaultApi {
     url.appendPathSegments(
       "defaultValue",
     )
+    decorator()
+  }
+
+  /**
+   * `POST /listBody`
+   *
+   * @return OK
+   */
+  public suspend fun listBody(body: List<Long> = emptyList(), decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("POST")
+    contentType(ContentType.Application.Json)
+    url.appendPathSegments(
+      "listBody",
+    )
+    setBody(body)
+    decorator()
+  }
+
+  /**
+   * `POST /mapBody`
+   *
+   * @return OK
+   */
+  public suspend fun mapBody(body: Map<String, Long> = emptyMap(), decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("POST")
+    contentType(ContentType.Application.Json)
+    url.appendPathSegments(
+      "mapBody",
+    )
+    setBody(body)
     decorator()
   }
 

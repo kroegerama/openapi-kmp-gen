@@ -89,6 +89,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DefaultValue'
+  /listBody:
+    post:
+      operationId: listBody
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: integer
+      responses:
+        200:
+          description: OK
+  /mapBody:
+    post:
+      operationId: mapBody
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: integer
+      responses:
+        200:
+          description: OK
   /multipart:
     servers:
       - url: https://example.com
@@ -227,3 +255,70 @@ components:
           type: object
           additionalProperties:
             type: string
+    SealedClassType:
+      type: string
+      enum:
+        - C1
+        - C2
+    SealedClass1:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/SealedClass1Child1'
+        - $ref: '#/components/schemas/SealedClass1Child2'
+      properties:
+        '#discriminator':
+          $ref: '#/components/schemas/SealedClassType'
+        commonAttr:
+          type: string
+      discriminator:
+        propertyName: '#discriminator'
+        mapping:
+          C1: '#/components/schemas/SealedClass1Child1'
+          C2: '#/components/schemas/SealedClass1Child2'
+    SealedClass1Child1:
+      allOf:
+        - $ref: '#/components/schemas/SealedClass1'
+        - type: object
+          properties:
+            child1Only:
+              type: integer
+    SealedClass1Child2:
+      allOf:
+        - $ref: '#/components/schemas/SealedClass1'
+        - type: object
+          properties:
+            child2Only:
+              type: string
+    SealedClass2:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/SealedClass2Child1'
+        - $ref: '#/components/schemas/SealedClass2Child2'
+      properties:
+        '#discriminator':
+          $ref: '#/components/schemas/SealedClassType'
+        commonAttr:
+          type: string
+      discriminator:
+        propertyName: '#discriminator'
+        mapping:
+          C1: '#/components/schemas/SealedClass2Child1'
+          C2: '#/components/schemas/SealedClass2Child2'
+    SealedClass2Child1:
+      type: object
+      properties:
+        '#discriminator':
+          $ref: '#/components/schemas/SealedClassType'
+        commonAttr:
+          type: string
+        child1Only:
+          type: integer
+    SealedClass2Child2:
+      type: object
+      properties:
+        '#discriminator':
+          $ref: '#/components/schemas/SealedClassType'
+        commonAttr:
+          type: string
+        child2Only:
+          type: string
