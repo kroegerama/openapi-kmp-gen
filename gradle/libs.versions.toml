@@ -1,22 +1,23 @@
 [versions]
-agp = "9.0.1"
-kotlin = "2.3.10"
+agp = "9.1.0"
+kotlin = "2.3.20"
 android-minSdk = "21"
 android-compileSdk = "36"
 vanniktechMavenPublish = "0.36.0"
 coroutines = "1.10.2"
-ktor = "3.4.0"
+ktor = "3.4.2"
 serialization = "1.10.0"
-arrow = "2.2.1.1"
-compose = "1.10.4"
+arrow = "2.2.2"
+compose = "1.10.6"
+collections-immutable = "0.4.0"
 datetime = "0.7.1"
 desugar = "2.1.5"
-shadow = "9.3.1"
+shadow = "9.4.1"
 airline = "0.9"
 guava = "33.5.0-jre"
-kotlinpoet = "2.2.0"
-swagger-parser = "2.1.38"
-gradle-publish = "2.0.0"
+kotlinpoet = "2.3.0"
+swagger-parser = "2.1.39"
+gradle-publish = "2.1.1"
 versions = "0.53.0"
 slf4f = "2.0.17"
 logback-android = "3.0.0"
@@ -28,6 +29,7 @@ kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotl
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
+kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "collections-immutable" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
