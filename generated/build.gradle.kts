@@ -58,7 +58,7 @@ tasks.register<JavaExec>("generate") {
 
     val shadowJar = fileTree("../cli/build/libs") {
         include("**-$version-shadow.jar")
-    }.singleFile
+    }
 
     classpath = files(shadowJar)
     mainClass = "com.kroegerama.openapi.kmp.gen.cli.CommandLineKt"
@@ -68,6 +68,7 @@ tasks.register<JavaExec>("generate") {
         "-p", "com.kroegerama.kmp.gen.generated",
         "-o", "src/commonMain/kotlin",
         "-s",
+        "-a",
         "testspec.yaml"
     )
 }
