@@ -12,7 +12,11 @@ import io.swagger.v3.oas.models.PathItem
 import io.swagger.v3.oas.models.info.Info
 import io.swagger.v3.oas.models.media.Discriminator
 import io.swagger.v3.oas.models.media.Schema
-import io.swagger.v3.oas.models.parameters.*
+import io.swagger.v3.oas.models.parameters.CookieParameter
+import io.swagger.v3.oas.models.parameters.HeaderParameter
+import io.swagger.v3.oas.models.parameters.Parameter
+import io.swagger.v3.oas.models.parameters.PathParameter
+import io.swagger.v3.oas.models.parameters.QueryParameter
 import io.swagger.v3.oas.models.security.SecurityScheme
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -28,6 +32,7 @@ class SpecConverter(
 
     private val modelSerialNames = mutableMapOf<List<String>, String>()
     private val modelInterfaces = mutableMapOf<List<String>, MutableList<List<String>>>()
+    private val ignoredProperties = mutableMapOf<List<String>, MutableSet<String>>()
 
     fun convert(): SpecModel {
         val info = spec.info
@@ -436,12 +441,18 @@ class SpecConverter(
                 val refTypeNames = item.`$ref`.refAsTypeNames()
                 modelSerialNames[refTypeNames] = mappedName
                 modelInterfaces.getOrPut(refTypeNames, ::mutableListOf) += typeNames
+                discriminator?.propertyName?.let { discriminator ->
+                    ignoredProperties.getOrPut(refTypeNames, ::mutableSetOf) += discriminator
+                }
 
                 SpecSchema.Ref(
                     typeNames = refTypeNames
                 )
             } else {
                 val childTypeNames = typeNames + "OneOf$index"
+                discriminator?.propertyName?.let { discriminator ->
+                    ignoredProperties.getOrPut(childTypeNames, ::mutableSetOf) += discriminator
+                }
                 children += convertNamedSchema(
                     typeNames = childTypeNames,
                     schema = item,
@@ -472,7 +483,10 @@ class SpecConverter(
         schema: Schema<*>
     ): SpecSchema.Object {
         val children = mutableListOf<SpecSchema.NamedSpecSchema>()
-        val properties = schema.resolveProperties(spec).map { (propertyName, propertySchema) ->
+        val properties = schema.resolveProperties(
+            spec = spec,
+            ignoreProperties = ignoredProperties[typeNames].orEmpty()
+        ).map { (propertyName, propertySchema) ->
             SpecProperty(
                 name = propertyName.asFieldName(),
                 rawName = propertyName,

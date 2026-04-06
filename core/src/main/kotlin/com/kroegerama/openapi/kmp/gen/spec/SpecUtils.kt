@@ -92,40 +92,47 @@ fun Schema<*>.resolveRef(
 
 fun Schema<*>.resolveProperties(
     spec: OpenAPI,
+    ignoreProperties: Set<String>
 ): Map<String, Schema<*>> {
     val collectedProperties: MutableMap<String, Schema<*>> = mutableMapOf()
     val visitedSchemas: MutableSet<Int> = mutableSetOf()
 
-    fun Schema<*>.inner() {
+    fun Schema<*>.inner(
+        ignoreProperties: Set<String>
+    ) {
         val hash = System.identityHashCode(this)
         if (hash in visitedSchemas) return
         visitedSchemas += hash
 
+        val localIgnoreProperties = discriminator?.propertyName?.let { discriminator ->
+            ignoreProperties + discriminator
+        } ?: ignoreProperties
+
         resolveRef(spec)?.let {
-            it.inner()
+            it.inner(localIgnoreProperties)
             return
         }
         if (anyOf != null) {
-            anyOf.forEach {
-                it.inner()
+            anyOf.forEach { child ->
+                child.inner(localIgnoreProperties)
             }
             return
         }
         if (allOf != null) {
-            allOf.forEach {
-                it.inner()
+            allOf.forEach { child ->
+                child.inner(localIgnoreProperties)
             }
             return
         }
-        if (oneOf != null) {
-            return
-        }
-        properties?.let {
+
+        properties?.filter { (propertyName, _) ->
+            propertyName !in localIgnoreProperties
+        }?.let {
             collectedProperties += it
         }
     }
 
-    inner()
+    inner(ignoreProperties)
 
     return collectedProperties
 }
