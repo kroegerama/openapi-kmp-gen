@@ -27,7 +27,7 @@ tasks.validatePlugins {
 }
 
 dependencies {
-    implementation(project(":core"))
+    implementation(projects.core)
 
     compileOnly(gradleApi())
     compileOnly(libs.kotlin.gradle.plugin)

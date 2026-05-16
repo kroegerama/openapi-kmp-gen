@@ -26,7 +26,6 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 dependencies {
-    implementation(libs.kotlin.stdlib)
     api(libs.swagger.parser)
     implementation(libs.kotlinpoet)
 }

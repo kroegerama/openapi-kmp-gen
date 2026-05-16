@@ -23,8 +23,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 dependencies {
-    implementation(project(":core"))
-    implementation(libs.kotlin.stdlib)
+    implementation(projects.core)
 
     implementation(libs.airline)
     implementation(libs.logback.classic)
