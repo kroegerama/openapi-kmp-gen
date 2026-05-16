@@ -143,3 +143,10 @@ public inline fun TypedCallException<*>.onCode(
         is UnexpectedCallException -> return
     }.let(block)
 }
+
+public inline fun <T, R> HttpCallResponse<T>.map(block: (T) -> R): HttpCallResponse<R> {
+    return HttpCallResponse(
+        data = block(data),
+        raw = raw
+    )
+}
