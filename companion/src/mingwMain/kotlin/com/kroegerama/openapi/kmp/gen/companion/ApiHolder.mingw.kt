@@ -3,7 +3,6 @@ package com.kroegerama.openapi.kmp.gen.companion
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.winhttp.WinHttp
-import io.ktor.utils.io.KtorDsl
 import kotlinx.cinterop.CFunction
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -35,7 +34,6 @@ public actual val platformUserAgent: String = memScoped {
     }
 }
 
-@KtorDsl
 public actual fun createPlatformHttpClient(decorator: HttpClientConfig<*>.() -> Unit): HttpClient {
     return HttpClient(WinHttp) {
         decorator()

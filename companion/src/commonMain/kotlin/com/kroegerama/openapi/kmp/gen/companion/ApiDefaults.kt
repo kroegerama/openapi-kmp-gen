@@ -9,7 +9,6 @@ import io.ktor.client.plugins.compression.ContentEncodingConfig
 import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.http.HttpHeaders
-import io.ktor.utils.io.KtorDsl
 import kotlinx.serialization.json.Json
 
 public fun createDefaultJson(): Json = Json {
@@ -57,6 +56,5 @@ public fun HttpClientConfig<*>.defaultConfig(
     }
 }
 
-@KtorDsl
 public expect fun createPlatformHttpClient(decorator: HttpClientConfig<*>.() -> Unit = {}): HttpClient
 public expect val platformUserAgent: String
