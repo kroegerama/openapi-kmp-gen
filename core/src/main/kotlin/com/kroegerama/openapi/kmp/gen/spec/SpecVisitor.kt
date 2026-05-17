@@ -10,7 +10,7 @@ import io.swagger.v3.oas.models.media.Content
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters.Parameter
 import io.swagger.v3.oas.models.responses.ApiResponse
-import java.util.*
+import java.util.IdentityHashMap
 
 class SpecVisitor(
     private val openAPI: OpenAPI,
@@ -30,12 +30,14 @@ class SpecVisitor(
             )
         }
         openAPI.components?.schemas?.forEach { (_, schema) ->
-            if (visited.put(schema, marker) == null) {
                 val forceCreate = schema.extensions?.get(Constants.EXT_FORCE_CREATE) as? Boolean == true
-                if (forceCreate) {
-                    visitor(schema)
+                if (forceCreate || options.generateAllNamedSchemas) {
+                    visitSchema(
+                        visFun = { obj -> visited.put(obj, marker) == null },
+                        schema = schema,
+                        visitor = visitor
+                    )
                 }
-            }
         }
     }
 
