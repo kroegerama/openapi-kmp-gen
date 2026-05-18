@@ -168,6 +168,35 @@ components:
       type: http
       scheme: bearer
   schemas:
+    NullableAttrTest:
+      required: [ attr2 ]
+      properties:
+        attr1:
+          allOf:
+            - $ref: '#/components/schemas/Photo'
+          nullable: false
+          description: nullable=false -> not null
+        attr2:
+          allOf:
+            - $ref: '#/components/schemas/Photo'
+          description: required -> not null
+        attr3:
+          anyOf:
+            - $ref: '#/components/schemas/Photo'
+            - type: "null"
+          description: has null type -> nullable
+    NullableTestAnyOfTypealias:
+      anyOf:
+        - $ref: "#/components/schemas/Photo"
+        - type: "null"
+      description: Nullable Photo via anyOf
+    NullableTestOneOfTypealias:
+      allOf:
+        - $ref: "#/components/schemas/Photo"
+      nullable: true
+      description: Nullable Photo via allOf
+    RefTypealias:
+      $ref: "#/components/schemas/Photo"
     Photo:
       type: object
       properties:

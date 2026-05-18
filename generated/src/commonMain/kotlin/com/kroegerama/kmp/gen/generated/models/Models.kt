@@ -5,8 +5,8 @@
  * Test API Description
  * Version 1.0.0-SNAPSHOT
  * 
- * Generated Mon, 6 Apr 2026 18:24:05 +0200
- * OpenAPI KMP Gen (version 1.3.0) by kroegerama
+ * Generated Mon, 18 May 2026 20:14:40 +0200
+ * OpenAPI KMP Gen (version 1.3.1) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
@@ -31,6 +31,31 @@ import kotlinx.datetime.LocalTime
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
+
+/**
+ * @param attr1 nullable=false -> not null
+ * @param attr2 required -> not null
+ * @param attr3 has null type -> nullable
+ */
+@Serializable
+@Immutable
+public data class NullableAttrTest(
+  /**
+   * nullable=false -> not null
+   */
+  @SerialName("attr1")
+  public val attr1: Photo,
+  /**
+   * required -> not null
+   */
+  @SerialName("attr2")
+  public val attr2: Photo,
+  /**
+   * has null type -> nullable
+   */
+  @SerialName("attr3")
+  public val attr3: Photo? = null,
+)
 
 @Serializable
 @Immutable
@@ -163,3 +188,15 @@ public data class SealedClass2Child2(
   @SerialName("child2Only")
   public val child2Only: String? = null,
 ) : SealedClass2
+
+/**
+ * Nullable Photo via anyOf
+ */
+public typealias NullableTestAnyOfTypealias = Photo?
+
+/**
+ * Nullable Photo via allOf
+ */
+public typealias NullableTestOneOfTypealias = Photo?
+
+public typealias RefTypealias = Photo
