@@ -110,6 +110,7 @@ sealed interface SpecSchema {
         override val typeNames: List<String>,
         override val deprecated: Boolean,
         override val description: String?,
+        val nullable: Boolean,
         val schema: SimpleType
     ) : NamedSpecSchema
 

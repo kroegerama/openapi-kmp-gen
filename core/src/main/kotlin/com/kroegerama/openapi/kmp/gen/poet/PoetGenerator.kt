@@ -537,6 +537,9 @@ class PoetGenerator(
                                 prop.type is SpecSchema.Array -> defaultValue("%M()", PoetMembers.EmptyList)
                                 prop.type is SpecSchema.Map -> defaultValue("%M()", PoetMembers.EmptyMap)
                             }
+                            prop.description?.let {
+                                addKdoc("%L", it)
+                            }
                         }
                         addTypes(inner(schema.children))
 
@@ -565,7 +568,7 @@ class PoetGenerator(
                     is SpecSchema.Typealias -> {
                         typeAliases += poetTypeAlias(
                             name = schema.typeNames.joinToString(""),
-                            typeName = convertSimpleType(schema.schema)
+                            typeName = convertSimpleType(schema.schema).nullable(schema.nullable)
                         ) {
                             if (schema.deprecated) {
                                 addAnnotation(deprecated())
@@ -593,9 +596,6 @@ class PoetGenerator(
             addAnnotation(serialName(property.rawName))
             if (property.deprecated) {
                 addAnnotation(deprecated())
-            }
-            property.description?.let {
-                addKdoc("%L", it)
             }
         }
     }

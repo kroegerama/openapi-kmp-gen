@@ -349,6 +349,7 @@ class SpecConverter(
             SpecSchemaType.Raw -> SpecSchema.Typealias(
                 typeNames = typeNames,
                 deprecated = schema.deprecated ?: false,
+                nullable = schema.isNullable(null),
                 schema = SpecSchema.AnyComplex,
                 description = schema.fullDescription()
             )
@@ -357,6 +358,7 @@ class SpecConverter(
                 typeNames = typeNames,
                 deprecated = schema.deprecated ?: false,
                 description = schema.fullDescription(),
+                nullable = schema.isNullable(null),
                 schema = SpecSchema.Ref(
                     typeNames = schema.`$ref`.refAsTypeNames()
                 )
@@ -365,6 +367,7 @@ class SpecConverter(
             is SpecSchemaType.Primitive -> SpecSchema.Typealias(
                 typeNames = typeNames,
                 deprecated = schema.deprecated ?: false,
+                nullable = schema.isNullable(null),
                 description = schema.fullDescription(),
                 schema = SpecSchema.Primitive(
                     type = type.type
@@ -375,6 +378,7 @@ class SpecConverter(
                 typeNames = typeNames,
                 deprecated = schema.deprecated ?: false,
                 description = schema.fullDescription(),
+                nullable = schema.isNullable(null),
                 schema = SpecSchema.Array(
                     items = convertSimpleType(
                         parentTypeNames = typeNames,
@@ -393,6 +397,7 @@ class SpecConverter(
                     typeNames = typeNames,
                     deprecated = schema.deprecated ?: false,
                     description = schema.fullDescription(),
+                    nullable = schema.isNullable(null),
                     schema = SpecSchema.Map(
                         items = convertSimpleType(
                             parentTypeNames = typeNames,
