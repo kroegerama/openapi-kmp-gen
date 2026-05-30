@@ -26,7 +26,7 @@ public abstract class ApiHolder {
         updateClient()
     }
 
-    public open fun HttpClientConfig<*>.apiConfig() {
+    public open fun HttpClientConfig<PlatformHttpClientEngineConfig>.apiConfig() {
         install(ContentNegotiation) {
             json(json)
         }
@@ -46,8 +46,8 @@ public abstract class ApiHolder {
         withCookies: Boolean = false,
         withCompression: Boolean = false,
         withLogging: Boolean = false,
-        createHttpClient: (decorator: HttpClientConfig<*>.() -> Unit) -> HttpClient = ::createPlatformHttpClient,
-        decorator: HttpClientConfig<*>.() -> Unit = {}
+        createHttpClient: (decorator: HttpClientConfig<PlatformHttpClientEngineConfig>.() -> Unit) -> HttpClient = ::createPlatformHttpClient,
+        decorator: HttpClientConfig<PlatformHttpClientEngineConfig>.() -> Unit = {}
     ) {
         this.json = json
         client = createHttpClient {

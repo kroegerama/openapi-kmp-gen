@@ -3,6 +3,7 @@ package com.kroegerama.openapi.kmp.gen.companion
 import com.kroegerama.openapi.kmp.gen.BuildConfig
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
+import io.ktor.client.engine.HttpClientEngineConfig
 import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.compression.ContentEncoding
 import io.ktor.client.plugins.compression.ContentEncodingConfig
@@ -26,7 +27,7 @@ public fun createDefaultJson(): Json = Json {
 public val defaultUserAgent: String
     get() = "ktor/${BuildConfig.KTOR} kmp-gen/${BuildConfig.COMPANION} $platformUserAgent"
 
-public fun HttpClientConfig<*>.defaultConfig(
+public fun HttpClientConfig<PlatformHttpClientEngineConfig>.defaultConfig(
     userAgent: String? = defaultUserAgent,
     withCookies: Boolean = false,
     withContentEncoding: Boolean = false,
@@ -56,5 +57,8 @@ public fun HttpClientConfig<*>.defaultConfig(
     }
 }
 
-public expect fun createPlatformHttpClient(decorator: HttpClientConfig<*>.() -> Unit = {}): HttpClient
+public expect class PlatformHttpClientEngineConfig : HttpClientEngineConfig
+
+public expect fun createPlatformHttpClient(decorator: HttpClientConfig<PlatformHttpClientEngineConfig>.() -> Unit = {}): HttpClient
+
 public expect val platformUserAgent: String

@@ -3,6 +3,7 @@ package com.kroegerama.openapi.kmp.gen.companion
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.winhttp.WinHttp
+import io.ktor.client.engine.winhttp.WinHttpClientEngineConfig
 import kotlinx.cinterop.CFunction
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -15,6 +16,8 @@ import kotlinx.cinterop.sizeOf
 import platform.windows.GetModuleHandleA
 import platform.windows.GetProcAddress
 import platform.windows.OSVERSIONINFOEXW
+
+public actual typealias PlatformHttpClientEngineConfig = WinHttpClientEngineConfig
 
 @OptIn(ExperimentalForeignApi::class)
 public actual val platformUserAgent: String = memScoped {
@@ -34,7 +37,7 @@ public actual val platformUserAgent: String = memScoped {
     }
 }
 
-public actual fun createPlatformHttpClient(decorator: HttpClientConfig<*>.() -> Unit): HttpClient {
+public actual fun createPlatformHttpClient(decorator: HttpClientConfig<PlatformHttpClientEngineConfig>.() -> Unit): HttpClient {
     return HttpClient(WinHttp) {
         decorator()
     }

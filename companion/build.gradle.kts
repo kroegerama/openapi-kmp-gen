@@ -30,6 +30,8 @@ kotlin {
         optIn.add("kotlin.contracts.ExperimentalContracts")
         optIn.add("kotlin.io.encoding.ExperimentalEncodingApi")
         optIn.add("kotlin.time.ExperimentalTime")
+
+        freeCompilerArgs.add("-Xexpect-actual-classes")
     }
     coreLibrariesVersion = "2.1.21"
 
