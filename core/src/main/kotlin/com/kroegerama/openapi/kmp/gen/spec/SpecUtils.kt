@@ -6,6 +6,9 @@ import com.kroegerama.openapi.kmp.gen.language.asTypeName
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.media.Schema
+import io.swagger.v3.oas.models.parameters.Parameter
+import io.swagger.v3.oas.models.parameters.RequestBody
+import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.servers.Server
 
 fun Schema<*>.getSpecType(): SpecSchemaType {
@@ -86,7 +89,34 @@ fun Schema<*>.resolveRef(
 ): Schema<*>? {
     val name = `$ref`?.substringAfterLast('/') ?: return null
     val ref = spec.components?.schemas?.get(name)
-    require(ref != null) { "cannot resolve $`$ref`" }
+    require(ref != null) { "cannot resolve schema ref '$`$ref`'" }
+    return ref
+}
+
+fun Parameter.resolveRef(
+    spec: OpenAPI
+): Parameter? {
+    val name = `$ref`?.substringAfterLast('/') ?: return null
+    val ref = spec.components?.parameters?.get(name)
+    require(ref != null) { "cannot resolve parameter ref '$`$ref`'" }
+    return ref
+}
+
+fun RequestBody.resolveRef(
+    spec: OpenAPI
+): RequestBody? {
+    val name = `$ref`?.substringAfterLast('/') ?: return null
+    val ref = spec.components?.requestBodies?.get(name)
+    require(ref != null) { "cannot resolve requestBody ref '$`$ref`'" }
+    return ref
+}
+
+fun ApiResponse.resolveRef(
+    spec: OpenAPI
+): ApiResponse? {
+    val name = `$ref`?.substringAfterLast('/') ?: return null
+    val ref = spec.components?.responses?.get(name)
+    require(ref != null) { "cannot resolve response ref '$`$ref`'" }
     return ref
 }
 

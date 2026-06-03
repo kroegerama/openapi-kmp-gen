@@ -19,6 +19,8 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 
 @CacheableTask
 abstract class KgenTask : DefaultTask() {
@@ -103,6 +105,8 @@ abstract class KgenTask : DefaultTask() {
         Generator(
             options = options,
             logger = logger
-        ).generate()
+        ).generate(
+            createdAt = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS)
+        )
     }
 }

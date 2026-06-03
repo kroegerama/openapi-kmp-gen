@@ -7,6 +7,8 @@ import com.kroegerama.openapi.kmp.gen.generator.Generator
 import io.airlift.airline.Arguments
 import io.airlift.airline.Command
 import io.airlift.airline.Option
+import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 
 @Command(name = "generate", description = "Generate code from the specified OpenAPI Spec.")
 class GenerateCommand : Runnable {
@@ -63,6 +65,13 @@ class GenerateCommand : Runnable {
     )
     private val outputDirIsSrcDir = false
 
+    @Option(
+        name = ["--created-at"],
+        title = "Set the generation date. Used e.g. as comment in file headers.",
+        hidden = true
+    )
+    private val createdAt = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS).toString()
+
     override fun run() {
         val options = OptionSet(
             specFile = specFile,
@@ -81,6 +90,8 @@ class GenerateCommand : Runnable {
         Generator(
             options = options,
             logger = logger
-        ).generate()
+        ).generate(
+            createdAt = OffsetDateTime.parse(createdAt)
+        )
     }
 }

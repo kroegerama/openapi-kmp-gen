@@ -20,7 +20,6 @@ import io.swagger.v3.oas.models.parameters.QueryParameter
 import io.swagger.v3.oas.models.security.SecurityScheme
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 
 typealias SchemaNameEvaluator = (List<String>) -> List<String>
 typealias SchemaEmitter = (SpecSchema.NamedSpecSchema) -> Unit
@@ -34,9 +33,10 @@ class SpecConverter(
     private val modelInterfaces = mutableMapOf<List<String>, MutableList<List<String>>>()
     private val ignoredProperties = mutableMapOf<List<String>, MutableSet<String>>()
 
-    fun convert(): SpecModel {
+    fun convert(
+        createdAt: OffsetDateTime
+    ): SpecModel {
         val info = spec.info
-        val createdAt = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS)
 
         val fileHeader = with(info) {
             buildString {
@@ -187,7 +187,11 @@ class SpecConverter(
         }
 
         val requestBodyEntry = operation.requestBody?.let { requestBody ->
-            val contentTypes = requestBody.content.orEmpty().entries
+            val contentTypes = if (requestBody.`$ref` != null) {
+                requireNotNull(requestBody.resolveRef(spec)) { "cannot resolve requestBody ref" }
+            } else {
+                requestBody
+            }.content.orEmpty().entries
             contentTypes.firstOrNull { (mime, _) ->
                 mime in preferredMimes
             } ?: contentTypes.firstOrNull()
@@ -203,9 +207,16 @@ class SpecConverter(
         }
 
         val response = operation.responses?.let {
-            val (_, response) = it.entries.minByOrNull { (code, _) ->
+            val (_, apiResponse) = it.entries.minByOrNull { (code, _) ->
                 code.responseCodePriority
             } ?: return@let null
+
+            val response = if (apiResponse.`$ref` != null) {
+                requireNotNull(apiResponse.resolveRef(spec)) { "cannot resolve response ref" }
+            } else {
+                apiResponse
+            }
+
             val description = response.description
             val contentEntries = response.content.orEmpty().entries
 
@@ -268,6 +279,12 @@ class SpecConverter(
     }
 
     private fun convertParameter(parameter: Parameter): SpecParameter {
+        if (parameter.`$ref` != null) {
+            val actualParameter = parameter.resolveRef(spec)
+            require(actualParameter != null) { "cannot resolve parameter ref" }
+            return convertParameter(actualParameter)
+        }
+        require(parameter.name != null) { "parameter name must not be null $parameter" }
         return SpecParameter(
             name = parameter.name.asFieldName(),
             rawName = parameter.name,

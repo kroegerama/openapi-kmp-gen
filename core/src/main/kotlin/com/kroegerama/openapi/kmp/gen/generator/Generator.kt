@@ -6,13 +6,16 @@ import com.kroegerama.openapi.kmp.gen.poet.PoetGenerator
 import com.kroegerama.openapi.kmp.gen.spec.SpecConverter
 import com.kroegerama.openapi.kmp.gen.spec.SpecModel
 import com.kroegerama.openapi.kmp.gen.spec.SpecParser
+import java.time.OffsetDateTime
 
 class Generator(
     private val options: OptionSet,
     private val logger: Logger
 ) {
 
-    fun generate() {
+    fun generate(
+        createdAt: OffsetDateTime
+    ) {
         logger.lifecycle("selected options: $options")
 
         val fileHelper = FileHelper(
@@ -28,7 +31,7 @@ class Generator(
         val specModel = SpecConverter(
             spec = spec,
             options = options
-        ).convert()
+        ).convert(createdAt)
 
         printSpecModel(specModel)
 
