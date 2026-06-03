@@ -322,7 +322,7 @@ class SpecConverter(
 
         SpecSchemaType.Enum,
         SpecSchemaType.Object,
-        SpecSchemaType.Sealed -> throw IllegalStateException("cannot resolve schema of type $type - parameter was not flattened")
+        SpecSchemaType.Sealed -> SpecSchema.Raw
     }
 
     private fun convertParameterType(parameter: Parameter): SpecParameter.Type = when (parameter) {
