@@ -51,7 +51,12 @@ abstract class KgenTask : DefaultTask() {
     @get:Optional
     abstract val allowParseErrors: Property<Boolean>
 
+    @get:Input
+    @get:Optional
+    abstract val createdAt: Property<OffsetDateTime>
+
     internal fun setProperties(extension: KgenExtension, info: SpecInfo, outputFolder: Provider<Directory>) {
+        createdAt.set(extension.createdAt)
         specFile.set(info.specFile)
         specUri.set(info.specUri)
         packageName.set(info.name)
@@ -106,7 +111,7 @@ abstract class KgenTask : DefaultTask() {
             options = options,
             logger = logger
         ).generate(
-            createdAt = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS)
+            createdAt = createdAt.getOrElse(OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS))
         )
     }
 }

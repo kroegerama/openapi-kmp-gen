@@ -6,10 +6,13 @@ import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
+import java.time.OffsetDateTime
 
 abstract class KgenExtension {
 
     abstract val specs: NamedDomainObjectContainer<SpecInfo>
+
+    abstract val createdAt: Property<OffsetDateTime>
 
     fun spec(packageName: String, action: Action<SpecInfo>) {
         specs.register(packageName) { specInfo ->
