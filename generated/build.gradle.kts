@@ -66,6 +66,7 @@ tasks.register<JavaExec>("generate") {
         "generate",
         "-p", "com.kroegerama.kmp.gen.generated",
         "-o", "src/commonMain/kotlin",
+        "--created-at", "2026-06-01T13:00:00Z",
         "-s",
         "-a",
         "testspec.yaml"

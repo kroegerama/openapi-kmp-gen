@@ -13,6 +13,16 @@ servers:
     description: HTTP Status API
 
 paths:
+  /refTest:
+    post:
+      operationId: refTest
+      parameters:
+        - $ref: '#/components/parameters/TestParam'
+      requestBody:
+        $ref: '#/components/requestBodies/TestRequestBody'
+      responses:
+        200:
+          $ref: '#/components/responses/TestResponse'
   /{status}:
     servers:
       - url: https://mock.httpstatus.io
@@ -167,7 +177,33 @@ components:
     BearerAuth:
       type: http
       scheme: bearer
+  parameters:
+    TestParam:
+      name: testParam
+      required: false
+      in: query
+      schema:
+        $ref: '#/components/schemas/DateTime'
+  requestBodies:
+    TestRequestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: string
+  responses:
+    TestResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Photo'
   schemas:
+    DateTime:
+      type: string
+      format: date-time
     NullableAttrTest:
       required: [ attr2 ]
       properties:

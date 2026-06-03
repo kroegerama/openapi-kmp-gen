@@ -5,8 +5,8 @@
  * Test API Description
  * Version 1.0.0-SNAPSHOT
  * 
- * Generated Mon, 18 May 2026 20:14:40 +0200
- * OpenAPI KMP Gen (version 1.3.1) by kroegerama
+ * Generated Mon, 1 Jun 2026 13:00:00 GMT
+ * OpenAPI KMP Gen (version 1.4.0) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
@@ -15,6 +15,7 @@ package com.kroegerama.kmp.gen.generated.api
 import arrow.core.Either
 import com.kroegerama.kmp.gen.generated.Api
 import com.kroegerama.kmp.gen.generated.Auth
+import com.kroegerama.kmp.gen.generated.models.DateTime
 import com.kroegerama.kmp.gen.generated.models.DefaultValue
 import com.kroegerama.kmp.gen.generated.models.IntegerTest
 import com.kroegerama.kmp.gen.generated.models.NumberTest
@@ -46,6 +47,26 @@ import kotlin.collections.emptyList
 import kotlin.collections.emptyMap
 
 public object DefaultApi {
+  /**
+   * `POST /refTest`
+   *
+   * @return OK
+   */
+  public suspend fun refTest(
+    testParam: DateTime? = null,
+    body: List<String> = emptyList(),
+    decorator: HttpRequestBuilder.() -> Unit = {},
+  ): Either<CallException, HttpCallResponse<Photo>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("POST")
+    contentType(ContentType.Application.Json)
+    url.appendPathSegments(
+      "refTest",
+    )
+    appendSerializedQueryParameter(name = "testParam", value = testParam, explode = true, json = Api.json)
+    setBody(body)
+    decorator()
+  }
+
   /**
    * `GET /{status}`
    *
