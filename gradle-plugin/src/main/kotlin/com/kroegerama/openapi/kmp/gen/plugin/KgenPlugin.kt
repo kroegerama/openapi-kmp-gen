@@ -7,16 +7,10 @@ import com.kroegerama.openapi.kmp.gen.Constants
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.file.Directory
-import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
-import org.gradle.plugins.ide.idea.model.IdeaModel
 import org.jetbrains.kotlin.gradle.dsl.HasConfigurableKotlinCompilerOptions
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSetContainer
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompileCommon
-import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 
 class KgenPlugin : Plugin<Project> {
 
@@ -55,31 +49,14 @@ class KgenPlugin : Plugin<Project> {
             it.dependsOn(generateAll)
         }
 
-        project.tasks.withType(KotlinCompile::class.java).configureEach {
-            it.dependsOn(generateAll)
-        }
-
-        project.tasks.withType(KotlinNativeCompile::class.java).configureEach {
-            it.dependsOn(generateAll)
-        }
-
-        project.tasks.withType(KotlinCompileCommon::class.java).configureEach {
-            it.dependsOn(generateAll)
-        }
-
-        project.pluginManager.withPlugin("idea") {
-            project.log("configure 'idea'")
-            project.configureIdea(outputDirectory)
-        }
-
         project.pluginManager.withPlugin("org.jetbrains.kotlin.jvm") {
             project.log("configure 'org.jetbrains.kotlin.jvm'")
-            project.configureKotlinSourceSetContainers(outputDirectory)
+            project.configureKotlinSourceSetContainers(generateAll)
         }
 
         project.pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
             project.log("configure 'org.jetbrains.kotlin.multiplatform'")
-            project.configureKotlinSourceSetContainers(outputDirectory)
+            project.configureKotlinSourceSetContainers(generateAll)
         }
 
         project.pluginManager.withPlugin("com.android.base") {
@@ -100,15 +77,6 @@ class KgenPlugin : Plugin<Project> {
         }
     }
 
-    private fun Project.configureIdea(
-        outputDirectory: Provider<Directory>
-    ) {
-        extensions.configure(IdeaModel::class.java) { model ->
-            log("configure IdeaModel, add generated sources to generatedSourceDirs")
-            model.module.generatedSourceDirs.add(outputDirectory.get().asFile)
-        }
-    }
-
     private fun Project.configureCompilerOptions() {
         extensions.configure(HasConfigurableKotlinCompilerOptions::class.java) { configurable ->
             log("configure KotlinCompilerOptions ${configurable.javaClass.simpleName}")
@@ -121,13 +89,14 @@ class KgenPlugin : Plugin<Project> {
     }
 
     private fun Project.configureKotlinSourceSetContainers(
-        outputDirectory: Provider<Directory>
+        generateAllTask: TaskProvider<KgenGenerateAllTask>
     ) {
         extensions.configure(KotlinSourceSetContainer::class.java) { container ->
             container.sourceSets.named(sourceSetNames::contains).configureEach { sourceSet ->
                 log("configure KotlinSourceSetContainer '${sourceSet.name}'")
 
                 log("\tadd generated sources to srcDir")
+                val outputDirectory = generateAllTask.flatMap { it.output }
                 sourceSet.kotlin.srcDir(outputDirectory)
 
                 log("\tadd companion dependency version ${BuildConfig.COMPANION} to SourceSet")
