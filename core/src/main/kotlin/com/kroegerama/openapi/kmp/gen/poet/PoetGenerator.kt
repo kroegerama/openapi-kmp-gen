@@ -218,7 +218,7 @@ class PoetGenerator(
                 "`${operation.method} ${operation.path}`",
                 operation.description
             ).joinToString("\n\n")
-            addKdoc(kdoc)
+            addKdoc("%L", kdoc)
 
             val response = convertSimpleType(operation.response.type)
             val either = PoetTypes.either(response)
