@@ -24,8 +24,8 @@ kotlin {
     explicitApi()
 
     compilerOptions {
-        apiVersion = KotlinVersion.KOTLIN_2_1
-        languageVersion = KotlinVersion.KOTLIN_2_1
+        apiVersion = KotlinVersion.KOTLIN_2_2
+        languageVersion = KotlinVersion.KOTLIN_2_2
 
         optIn.add("kotlin.contracts.ExperimentalContracts")
         optIn.add("kotlin.io.encoding.ExperimentalEncodingApi")
@@ -33,7 +33,7 @@ kotlin {
 
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
-    coreLibrariesVersion = "2.1.21"
+    coreLibrariesVersion = "2.2.21"
 
     jvm {
         compilerOptions {

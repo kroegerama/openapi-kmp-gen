@@ -12,10 +12,10 @@ kotlin {
         moduleName = "kmp.gen.cli"
         jvmTarget = JvmTarget.JVM_11
         freeCompilerArgs.add("-Xjdk-release=11")
-        apiVersion = KotlinVersion.KOTLIN_2_1
-        languageVersion = KotlinVersion.KOTLIN_2_1
+        apiVersion = KotlinVersion.KOTLIN_2_2
+        languageVersion = KotlinVersion.KOTLIN_2_2
     }
-    coreLibrariesVersion = "2.1.21"
+    coreLibrariesVersion = "2.2.21"
 }
 
 tasks.withType<JavaCompile>().configureEach {
