@@ -1,8 +1,8 @@
 package main
 
-import com.kroegerama.kmp.gen.generated.Api
-import com.kroegerama.kmp.gen.generated.Auth
-import com.kroegerama.kmp.gen.generated.api.DefaultApi
+import com.kroegerama.kmp.gen.generated30.Api
+import com.kroegerama.kmp.gen.generated30.Auth
+import com.kroegerama.kmp.gen.generated30.api.DefaultApi
 import com.kroegerama.openapi.kmp.gen.companion.AuthItem
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.forms.MultiPartFormDataContent

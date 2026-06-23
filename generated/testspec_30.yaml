@@ -226,7 +226,7 @@ components:
         - $ref: "#/components/schemas/Photo"
         - type: "null"
       description: Nullable Photo via anyOf
-    NullableTestOneOfTypealias:
+    NullableTestAllOfTypealias:
       allOf:
         - $ref: "#/components/schemas/Photo"
       nullable: true
@@ -260,6 +260,9 @@ components:
         instant:
           type: string
           format: date-time
+        duration:
+          type: string
+          format: duration
         uuid:
           type: string
           format: uuid

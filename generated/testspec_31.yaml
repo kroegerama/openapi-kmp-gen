@@ -1,0 +1,385 @@
+openapi: 3.1.4
+info:
+  title: Test API
+  description: Test API Description
+  version: 1.0.0-SNAPSHOT
+
+servers:
+  - url: https://jsonplaceholder.typicode.com
+    description: JSON Example API
+  - url: https://example.com
+    description: Example API
+  - url: https://mock.httpstatus.io
+    description: HTTP Status API
+
+paths:
+  /refTest:
+    post:
+      operationId: refTest
+      parameters:
+        - $ref: '#/components/parameters/TestParam'
+      requestBody:
+        $ref: '#/components/requestBodies/TestRequestBody'
+      responses:
+        200:
+          $ref: '#/components/responses/TestResponse'
+  /{status}:
+    servers:
+      - url: https://mock.httpstatus.io
+    parameters:
+      - in: path
+        name: status
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: count
+        schema:
+          type: integer
+          format: int32
+    get:
+      operationId: redirectTest
+      responses:
+        200:
+          description: OK
+  /photos/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+    get:
+      operationId: getPhoto
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photo'
+  /serialTest:
+    get:
+      operationId: getSerialTest
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SerialTest'
+  /integerTest:
+    get:
+      operationId: getIntegerTest
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegerTest'
+  /numberTest:
+    get:
+      operationId: getNumberTest
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NumberTest'
+  /defaultValue:
+    get:
+      operationId: defaultValue
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefaultValue'
+  /listBody:
+    post:
+      operationId: listBody
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: integer
+      responses:
+        200:
+          description: OK
+  /mapBody:
+    post:
+      operationId: mapBody
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: integer
+      responses:
+        200:
+          description: OK
+  /multipart:
+    servers:
+      - url: https://example.com
+    post:
+      operationId: multipart
+      security:
+        - BasicAuth: [ ]
+        - TokenAuth: [ ]
+        - APIKeyAuth: [ ]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+      responses:
+        200:
+          description: OK
+  /urlencoded:
+    servers:
+      - url: https://example.com
+    post:
+      operationId: urlEncoded
+      security:
+        - BearerAuth: [ ]
+        - TokenAuth: [ ]
+        - APIKeyAuth: [ ]
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+      responses:
+        200:
+          description: OK
+components:
+  securitySchemes:
+    TokenAuth:
+      type: apiKey
+      in: header
+      name: token
+    APIKeyAuth:
+      type: apiKey
+      in: query
+      name: token
+    BasicAuth:
+      type: http
+      scheme: basic
+    BearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    TestParam:
+      name: testParam
+      required: false
+      in: query
+      schema:
+        $ref: '#/components/schemas/DateTime'
+  requestBodies:
+    TestRequestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: string
+  responses:
+    TestResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Photo'
+  schemas:
+    DateTime:
+      type: string
+      format: date-time
+    NullableAttrTest:
+      required: [ attr1, attr2 ]
+      properties:
+        attr1:
+          $ref: '#/components/schemas/Photo'
+          description: required -> not null
+        attr2:
+          allOf:
+            - $ref: '#/components/schemas/Photo'
+          description: required allOf -> not null
+        attr3:
+          anyOf:
+            - $ref: '#/components/schemas/Photo'
+            - type: "null"
+          description: has null type -> nullable
+    NullableTestAnyOfTypealias:
+      anyOf:
+        - $ref: "#/components/schemas/Photo"
+        - type: "null"
+      description: Nullable Photo via anyOf
+    RefTypealias:
+      $ref: "#/components/schemas/Photo"
+    Photo:
+      type: object
+      properties:
+        albumId:
+          type: integer
+          format: int32
+        id:
+          type: integer
+          format: int32
+        title:
+          type: string
+        url:
+          type: string
+        thumbnailUrl:
+          type: string
+    SerialTest:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+          format: time
+        instant:
+          type: string
+          format: date-time
+        duration:
+          type: string
+          format: duration
+        uuid:
+          type: string
+          format: uuid
+        base64:
+          type: string
+          format: byte
+    IntegerTest:
+      type: object
+      properties:
+        unknown:
+          type: integer
+        int32:
+          type: integer
+          format: int32
+        int64:
+          type: integer
+          format: int64
+        float:
+          type: integer
+          format: float
+        double:
+          type: integer
+          format: double
+    NumberTest:
+      type: object
+      properties:
+        unknown:
+          type: number
+        float:
+          type: number
+          format: float
+        double:
+          type: number
+          format: double
+        int32:
+          type: number
+          format: int32
+        int64:
+          type: number
+          format: int64
+    DefaultValue:
+      type: object
+      required:
+        - requiredList
+        - requiredMap
+      properties:
+        nullableString:
+          type: string
+        nullableList:
+          type: array
+          items:
+            type: string
+        requiredList:
+          type: array
+          items:
+            type: string
+        requiredMap:
+          type: object
+          additionalProperties:
+            type: string
+    SealedClassType:
+      type: string
+      enum:
+        - C1
+        - C2
+    SealedClass1:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/SealedClass1Child1'
+        - $ref: '#/components/schemas/SealedClass1Child2'
+      properties:
+        '#discriminator':
+          $ref: '#/components/schemas/SealedClassType'
+        commonAttr:
+          type: string
+      discriminator:
+        propertyName: '#discriminator'
+        mapping:
+          C1: '#/components/schemas/SealedClass1Child1'
+          C2: '#/components/schemas/SealedClass1Child2'
+    SealedClass1Child1:
+      allOf:
+        - $ref: '#/components/schemas/SealedClass1'
+        - type: object
+          properties:
+            child1Only:
+              type: integer
+    SealedClass1Child2:
+      allOf:
+        - $ref: '#/components/schemas/SealedClass1'
+        - type: object
+          properties:
+            child2Only:
+              type: string
+    SealedClass2:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/SealedClass2Child1'
+        - $ref: '#/components/schemas/SealedClass2Child2'
+      properties:
+        '#discriminator':
+          $ref: '#/components/schemas/SealedClassType'
+        commonAttr:
+          type: string
+      discriminator:
+        propertyName: '#discriminator'
+        mapping:
+          C1: '#/components/schemas/SealedClass2Child1'
+          C2: '#/components/schemas/SealedClass2Child2'
+    SealedClass2Child1:
+      type: object
+      properties:
+        '#discriminator':
+          $ref: '#/components/schemas/SealedClassType'
+        commonAttr:
+          type: string
+        child1Only:
+          type: integer
+    SealedClass2Child2:
+      type: object
+      properties:
+        '#discriminator':
+          $ref: '#/components/schemas/SealedClassType'
+        commonAttr:
+          type: string
+        child2Only:
+          type: string

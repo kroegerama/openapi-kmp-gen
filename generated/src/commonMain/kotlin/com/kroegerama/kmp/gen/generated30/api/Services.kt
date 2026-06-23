@@ -6,21 +6,21 @@
  * Version 1.0.0-SNAPSHOT
  * 
  * Generated Mon, 1 Jun 2026 13:00:00 GMT
- * OpenAPI KMP Gen (version 1.4.0) by kroegerama
+ * OpenAPI KMP Gen (version 1.5.0) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
-package com.kroegerama.kmp.gen.generated.api
+package com.kroegerama.kmp.gen.generated30.api
 
 import arrow.core.Either
-import com.kroegerama.kmp.gen.generated.Api
-import com.kroegerama.kmp.gen.generated.Auth
-import com.kroegerama.kmp.gen.generated.models.DateTime
-import com.kroegerama.kmp.gen.generated.models.DefaultValue
-import com.kroegerama.kmp.gen.generated.models.IntegerTest
-import com.kroegerama.kmp.gen.generated.models.NumberTest
-import com.kroegerama.kmp.gen.generated.models.Photo
-import com.kroegerama.kmp.gen.generated.models.SerialTest
+import com.kroegerama.kmp.gen.generated30.Api
+import com.kroegerama.kmp.gen.generated30.Auth
+import com.kroegerama.kmp.gen.generated30.models.DateTime
+import com.kroegerama.kmp.gen.generated30.models.DefaultValue
+import com.kroegerama.kmp.gen.generated30.models.IntegerTest
+import com.kroegerama.kmp.gen.generated30.models.NumberTest
+import com.kroegerama.kmp.gen.generated30.models.Photo
+import com.kroegerama.kmp.gen.generated30.models.SerialTest
 import com.kroegerama.openapi.kmp.gen.`companion`.AuthPlugin.Plugin.authKeys
 import com.kroegerama.openapi.kmp.gen.`companion`.CallException
 import com.kroegerama.openapi.kmp.gen.`companion`.HttpCallResponse

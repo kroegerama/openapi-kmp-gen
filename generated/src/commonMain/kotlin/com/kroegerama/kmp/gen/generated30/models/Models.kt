@@ -6,14 +6,15 @@
  * Version 1.0.0-SNAPSHOT
  * 
  * Generated Mon, 1 Jun 2026 13:00:00 GMT
- * OpenAPI KMP Gen (version 1.4.0) by kroegerama
+ * OpenAPI KMP Gen (version 1.5.0) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
-package com.kroegerama.kmp.gen.generated.models
+package com.kroegerama.kmp.gen.generated30.models
 
 import androidx.compose.runtime.Immutable
 import com.kroegerama.openapi.kmp.gen.`companion`.SerializableBase64
+import com.kroegerama.openapi.kmp.gen.`companion`.SerializableISO8601Instant
 import kotlin.Double
 import kotlin.Float
 import kotlin.Int
@@ -24,7 +25,7 @@ import kotlin.collections.List
 import kotlin.collections.Map
 import kotlin.collections.emptyList
 import kotlin.collections.emptyMap
-import kotlin.time.Instant
+import kotlin.time.Duration
 import kotlin.uuid.Uuid
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
@@ -80,7 +81,9 @@ public data class SerialTest(
   @SerialName("time")
   public val time: LocalTime? = null,
   @SerialName("instant")
-  public val instant: Instant? = null,
+  public val instant: SerializableISO8601Instant? = null,
+  @SerialName("duration")
+  public val duration: Duration? = null,
   @SerialName("uuid")
   public val uuid: Uuid? = null,
   @SerialName("base64")
@@ -189,7 +192,7 @@ public data class SealedClass2Child2(
   public val child2Only: String? = null,
 ) : SealedClass2
 
-public typealias DateTime = Instant
+public typealias DateTime = SerializableISO8601Instant
 
 /**
  * Nullable Photo via anyOf
@@ -199,6 +202,6 @@ public typealias NullableTestAnyOfTypealias = Photo?
 /**
  * Nullable Photo via allOf
  */
-public typealias NullableTestOneOfTypealias = Photo?
+public typealias NullableTestAllOfTypealias = Photo?
 
 public typealias RefTypealias = Photo

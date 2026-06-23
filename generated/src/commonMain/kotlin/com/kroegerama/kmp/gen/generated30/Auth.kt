@@ -6,11 +6,11 @@
  * Version 1.0.0-SNAPSHOT
  * 
  * Generated Mon, 1 Jun 2026 13:00:00 GMT
- * OpenAPI KMP Gen (version 1.4.0) by kroegerama
+ * OpenAPI KMP Gen (version 1.5.0) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
-package com.kroegerama.kmp.gen.generated
+package com.kroegerama.kmp.gen.generated30
 
 import com.kroegerama.openapi.kmp.gen.`companion`.AuthItem
 import kotlin.String

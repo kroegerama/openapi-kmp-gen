@@ -49,11 +49,11 @@ dependencies {
     coreLibraryDesugaring(libs.desugar)
 }
 
-tasks.register<JavaExec>("generate") {
+val generate30 by tasks.registering(JavaExec::class) {
     dependsOn(project(":cli").tasks.named("shadowJar"))
 
     group = "kmpgen"
-    inputs.files("testspec.yaml")
+    inputs.files("testspec_30.yaml")
 
     val shadowJar = fileTree("../cli/build/libs") {
         include("**-$version-shadow.jar")
@@ -64,11 +64,40 @@ tasks.register<JavaExec>("generate") {
 
     args = listOf(
         "generate",
-        "-p", "com.kroegerama.kmp.gen.generated",
+        "-p", "com.kroegerama.kmp.gen.generated30",
         "-o", "src/commonMain/kotlin",
         "--created-at", "2026-06-01T13:00:00Z",
         "-s",
         "-a",
-        "testspec.yaml"
+        "testspec_30.yaml"
     )
+}
+
+val generate31 by tasks.registering(JavaExec::class) {
+    dependsOn(project(":cli").tasks.named("shadowJar"))
+
+    group = "kmpgen"
+    inputs.files("testspec_31.yaml")
+
+    val shadowJar = fileTree("../cli/build/libs") {
+        include("**-$version-shadow.jar")
+    }
+
+    classpath = files(shadowJar)
+    mainClass = "com.kroegerama.openapi.kmp.gen.cli.CommandLineKt"
+
+    args = listOf(
+        "generate",
+        "-p", "com.kroegerama.kmp.gen.generated31",
+        "-o", "src/commonMain/kotlin",
+        "--created-at", "2026-06-01T13:00:00Z",
+        "-s",
+        "-a",
+        "testspec_31.yaml"
+    )
+}
+
+tasks.register("generate") {
+    dependsOn(generate30, generate31)
+    group = "kmpgen"
 }
