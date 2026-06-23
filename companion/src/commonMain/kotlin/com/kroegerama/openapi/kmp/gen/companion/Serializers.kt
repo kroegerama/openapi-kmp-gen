@@ -1,12 +1,13 @@
 package com.kroegerama.openapi.kmp.gen.companion
 
-import io.ktor.client.request.HttpRequestBuilder
-import io.ktor.client.request.cookie
-import io.ktor.client.request.header
-import io.ktor.client.request.parameter
-import io.ktor.http.appendPathSegments
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.UtcOffset
+import kotlinx.datetime.format.DateTimeComponents
+import kotlinx.datetime.format.DateTimeFormat
+import kotlinx.datetime.format.alternativeParsing
+import kotlinx.datetime.serializers.FormattedInstantSerializer
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
@@ -15,13 +16,6 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.encodeToJsonElement
 import kotlin.io.encoding.Base64
 import kotlin.time.Instant
 
@@ -69,104 +63,17 @@ public class ImmutableListSerializer<T>(
     override fun deserialize(decoder: Decoder): ImmutableList<T> = listSerializer.deserialize(decoder).toImmutableList()
 }
 
-public inline fun <reified T> Json.encodeToPrimitiveString(value: T): String? {
-    if (value == null) return null
-    return when (val e = encodeToJsonElement(value)) {
-        is JsonPrimitive -> e.content
-        is JsonArray -> e.toString()
-        is JsonObject -> e.toString()
-        JsonNull -> null
-    }
-}
+public typealias SerializableISO8601Instant = @Serializable(ISO8601InstantSerializer::class) Instant
 
-@PublishedApi
-internal fun serializeInner(inner: JsonElement): String? = when (inner) {
-    is JsonPrimitive -> inner.content
-    is JsonArray -> inner.toString()
-    is JsonObject -> inner.toString()
-    JsonNull -> null
-}
+public object ISO8601InstantSerializer : FormattedInstantSerializer(
+    "com.kroegerama.openapi.kmp.gen.companion.ISO8601InstantSerializer",
+    ISO_8601_FORMAT
+)
 
-public inline fun <reified T> HttpRequestBuilder.appendSerializedPathSegment(
-    value: T,
-    explode: Boolean = false,
-    json: Json = Json
-) {
-    if (value == null) return
-    val content = when (val e = json.encodeToJsonElement(value)) {
-        JsonNull -> return
-        is JsonPrimitive -> e.content
-        is JsonArray -> e.mapNotNull { serializeInner(it) }.joinToString(",")
-        is JsonObject -> e.toString()
-    }
-    url.appendPathSegments(content)
-}
-
-public inline fun <reified T> createSerializedPathSegment(
-    value: T,
-    explode: Boolean = false,
-    json: Json = Json
-): String {
-    if (value == null) return ""
-    return when (val e = json.encodeToJsonElement(value)) {
-        JsonNull -> return ""
-        is JsonPrimitive -> e.content
-        is JsonArray -> e.mapNotNull { serializeInner(it) }.joinToString(",")
-        is JsonObject -> e.toString()
-    }
-}
-
-public inline fun <reified T> HttpRequestBuilder.appendSerializedQueryParameter(
-    name: String,
-    value: T,
-    explode: Boolean = true,
-    json: Json = Json
-) {
-    if (value == null) return
-    when (val e = json.encodeToJsonElement(value)) {
-        JsonNull -> return
-        is JsonPrimitive -> parameter(name, e.content)
-
-        is JsonArray -> {
-            if (explode) {
-                e.forEach {
-                    parameter(name, serializeInner(it))
-                }
-            } else {
-                parameter(name, e.mapNotNull { serializeInner(it) }.joinToString(","))
-            }
-        }
-
-        is JsonObject -> parameter(name, e.toString())
-    }
-}
-
-public inline fun <reified T> HttpRequestBuilder.appendSerializedHeaderParameter(
-    name: String,
-    value: T,
-    explode: Boolean = false,
-    json: Json = Json
-) {
-    if (value == null) return
-    when (val e = json.encodeToJsonElement(value)) {
-        JsonNull -> return
-        is JsonPrimitive -> header(name, e.content)
-        is JsonArray -> header(name, e.mapNotNull { serializeInner(it) }.joinToString(","))
-        is JsonObject -> header(name, e.toString())
-    }
-}
-
-public inline fun <reified T> HttpRequestBuilder.appendSerializedCookieParameter(
-    name: String,
-    value: T,
-    explode: Boolean = true,
-    json: Json = Json
-) {
-    if (value == null) return
-    when (val e = json.encodeToJsonElement(value)) {
-        JsonNull -> return
-        is JsonPrimitive -> cookie(name, e.content)
-        is JsonArray -> cookie(name, e.mapNotNull { serializeInner(it) }.joinToString(","))
-        is JsonObject -> cookie(name, e.toString())
-    }
+public val ISO_8601_FORMAT: DateTimeFormat<DateTimeComponents> = DateTimeComponents.Format {
+    dateTime(LocalDateTime.Formats.ISO)
+    alternativeParsing(
+        { offset(UtcOffset.Formats.ISO_BASIC) },
+        { offset(UtcOffset.Formats.FOUR_DIGITS) },
+    ) { offset(UtcOffset.Formats.ISO) }
 }
