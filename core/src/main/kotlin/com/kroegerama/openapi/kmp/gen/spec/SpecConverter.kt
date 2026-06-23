@@ -186,7 +186,14 @@ class SpecConverter(
             it.type.priority
         }
 
-        val requestBodyEntry = operation.requestBody?.let { requestBody ->
+        val requestBody = operation.requestBody?.let { requestBody ->
+            if (requestBody.`$ref` != null) {
+                requireNotNull(requestBody.resolveRef(spec)) { "cannot resolve requestBody ref" }
+            } else {
+                requestBody
+            }
+        }
+        val requestBodyEntry = requestBody?.let { requestBody ->
             val contentTypes = if (requestBody.`$ref` != null) {
                 requireNotNull(requestBody.resolveRef(spec)) { "cannot resolve requestBody ref" }
             } else {
@@ -201,8 +208,8 @@ class SpecConverter(
             val schema = mediaType.schema
             SpecOperation.SchemaInfo(
                 type = resolveSchema(schema),
-                nullable = operation.requestBody?.required != true,
-                description = operation.requestBody?.description
+                nullable = requestBody.required != true,
+                description = requestBody.description
             )
         }
 
