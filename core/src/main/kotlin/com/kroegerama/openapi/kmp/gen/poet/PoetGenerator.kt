@@ -610,7 +610,8 @@ class PoetGenerator(
             SpecPrimitiveType.String -> STRING
             SpecPrimitiveType.Date -> PoetTypes.LocalDate
             SpecPrimitiveType.Time -> PoetTypes.LocalTime
-            SpecPrimitiveType.DateTime -> PoetTypes.Instant
+            SpecPrimitiveType.DateTime -> PoetTypes.SerializableISO8601Instant
+            SpecPrimitiveType.Duration -> PoetTypes.Duration
             SpecPrimitiveType.Base64 -> PoetTypes.SerializableBase64
             SpecPrimitiveType.EpochSeconds -> PoetTypes.SerializableEpochSeconds
             SpecPrimitiveType.EpochMilliseconds -> PoetTypes.SerializableEpochMilliseconds

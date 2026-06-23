@@ -48,6 +48,7 @@ enum class SpecPrimitiveType {
     Date,
     Time,
     DateTime,
+    Duration,
     EpochSeconds,
     EpochMilliseconds,
     Base64,

@@ -39,8 +39,9 @@ class PoetTypes(
 
         val LocalDate = ClassName("kotlinx.datetime", "LocalDate")
         val LocalTime = ClassName("kotlinx.datetime", "LocalTime")
-        val Instant = ClassName("kotlin.time", "Instant")
+        val Duration = ClassName("kotlin.time", "Duration")
         val Uuid = ClassName("kotlin.uuid", "Uuid")
+        val SerializableISO8601Instant = ClassName(COMPANION_PACKAGE, "SerializableISO8601Instant")
         val SerializableBase64 = ClassName(COMPANION_PACKAGE, "SerializableBase64")
         val SerializableEpochSeconds = ClassName(COMPANION_PACKAGE, "SerializableEpochSeconds")
         val SerializableEpochMilliseconds = ClassName(COMPANION_PACKAGE, "SerializableEpochMilliseconds")

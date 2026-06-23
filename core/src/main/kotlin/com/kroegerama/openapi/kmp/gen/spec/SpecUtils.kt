@@ -47,6 +47,7 @@ fun Schema<*>.getSpecType(): SpecSchemaType {
                 "base64" -> SpecPrimitiveType.Base64
                 "byte" -> SpecPrimitiveType.Base64
                 "uuid" -> SpecPrimitiveType.UUID
+                "duration" -> SpecPrimitiveType.Duration
                 else -> SpecPrimitiveType.String
             }
 
