@@ -13,6 +13,12 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.encodeToJsonElement
 
+/**
+ * Encodes [value] to a single scalar string, or `null` when it has no scalar form.
+ *
+ * A [JsonPrimitive] yields its raw [content][JsonPrimitive.content] (strings are unquoted);
+ * arrays and objects yield their compact JSON text; `null` and [JsonNull] yield `null`.
+ */
 public inline fun <reified T> Json.encodeToPrimitiveString(value: T): String? {
     if (value == null) return null
     return when (val e = encodeToJsonElement(value)) {
@@ -31,18 +37,75 @@ internal fun serializeInner(inner: JsonElement): String? = when (inner) {
     JsonNull -> null
 }
 
+/**
+ * Serializes [element] using OpenAPI **simple** style — the default for `path` and `header`
+ * parameters. Primitives and arrays are unaffected by [explode] in this style (arrays are always
+ * comma-joined); objects honor it: `k1=v1,k2=v2` when exploded, otherwise `k1,v1,k2,v2`.
+ * Returns `null` for [JsonNull] so callers can skip the parameter entirely.
+ */
+@PublishedApi
+internal fun serializeSimple(element: JsonElement, explode: Boolean): String? = when (element) {
+    JsonNull -> null
+    is JsonPrimitive -> element.content
+    is JsonArray -> element.mapNotNull { serializeInner(it) }.joinToString(",")
+    is JsonObject -> if (explode) {
+        element.entries.joinToString(",") { (key, value) -> "$key=${serializeInner(value).orEmpty()}" }
+    } else {
+        element.entries.flatMap { (key, value) -> listOf(key, serializeInner(value).orEmpty()) }.joinToString(",")
+    }
+}
+
+/**
+ * Serializes [element] using OpenAPI **form** style — the default for `query` and `cookie`
+ * parameters — invoking [emit] once per resulting name/value pair (`value` is `null` for a
+ * [JsonNull] element, which callers should skip). Behavior by [explode]:
+ * - primitive → a single `name`/value pair
+ * - array, explode → one pair per item under [name]; non-explode → one comma-joined pair
+ * - object, explode → one pair per property keyed by the **property name** ([name] is dropped);
+ *   non-explode → one pair under [name] rendered as `k1,v1,k2,v2`
+ *
+ * The `deepObject` style (`name[key]=value`) is not supported.
+ */
+@PublishedApi
+internal fun serializeForm(
+    name: String,
+    element: JsonElement,
+    explode: Boolean,
+    emit: (name: String, value: String?) -> Unit
+) {
+    when (element) {
+        JsonNull -> return
+        is JsonPrimitive -> emit(name, element.content)
+        is JsonArray -> if (explode) {
+            element.forEach { emit(name, serializeInner(it)) }
+        } else {
+            emit(name, element.mapNotNull { serializeInner(it) }.joinToString(","))
+        }
+
+        is JsonObject -> if (explode) {
+            element.forEach { (key, value) -> emit(key, serializeInner(value)) }
+        } else {
+            emit(name, element.entries.flatMap { (key, value) -> listOf(key, serializeInner(value).orEmpty()) }.joinToString(","))
+        }
+    }
+}
+
+/**
+ * Appends [value] to the request URL as a single OpenAPI **simple**-style path segment (see
+ * [serializeSimple] for how [explode] affects arrays and objects). `null` and [JsonNull] values are
+ * skipped, appending nothing.
+ *
+ * This is the [HttpRequestBuilder] counterpart to [createSerializedPathSegment]. Generated code uses
+ * [createSerializedPathSegment], which composes several segments into one `url.appendPathSegments(...)`
+ * call; this variant is provided for hand-written requests that append a single segment directly.
+ */
 public inline fun <reified T> HttpRequestBuilder.appendSerializedPathSegment(
     value: T,
     explode: Boolean = false,
     json: Json = Json
 ) {
     if (value == null) return
-    val content = when (val e = json.encodeToJsonElement(value)) {
-        JsonNull -> return
-        is JsonPrimitive -> e.content
-        is JsonArray -> e.mapNotNull { serializeInner(it) }.joinToString(",")
-        is JsonObject -> e.toString()
-    }
+    val content = serializeSimple(json.encodeToJsonElement(value), explode) ?: return
     url.appendPathSegments(content)
 }
 
@@ -52,12 +115,7 @@ public inline fun <reified T> createSerializedPathSegment(
     json: Json = Json
 ): String {
     if (value == null) return ""
-    return when (val e = json.encodeToJsonElement(value)) {
-        JsonNull -> ""
-        is JsonPrimitive -> e.content
-        is JsonArray -> e.mapNotNull { serializeInner(it) }.joinToString(",")
-        is JsonObject -> e.toString()
-    }
+    return serializeSimple(json.encodeToJsonElement(value), explode).orEmpty()
 }
 
 public inline fun <reified T> HttpRequestBuilder.appendSerializedQueryParameter(
@@ -67,21 +125,8 @@ public inline fun <reified T> HttpRequestBuilder.appendSerializedQueryParameter(
     json: Json = Json
 ) {
     if (value == null) return
-    when (val e = json.encodeToJsonElement(value)) {
-        JsonNull -> return
-        is JsonPrimitive -> parameter(name, e.content)
-
-        is JsonArray -> {
-            if (explode) {
-                e.forEach {
-                    parameter(name, serializeInner(it))
-                }
-            } else {
-                parameter(name, e.mapNotNull { serializeInner(it) }.joinToString(","))
-            }
-        }
-
-        is JsonObject -> parameter(name, e.toString())
+    serializeForm(name, json.encodeToJsonElement(value), explode) { key, content ->
+        parameter(key, content)
     }
 }
 
@@ -92,12 +137,8 @@ public inline fun <reified T> HttpRequestBuilder.appendSerializedHeaderParameter
     json: Json = Json
 ) {
     if (value == null) return
-    when (val e = json.encodeToJsonElement(value)) {
-        JsonNull -> return
-        is JsonPrimitive -> header(name, e.content)
-        is JsonArray -> header(name, e.mapNotNull { serializeInner(it) }.joinToString(","))
-        is JsonObject -> header(name, e.toString())
-    }
+    val content = serializeSimple(json.encodeToJsonElement(value), explode) ?: return
+    header(name, content)
 }
 
 public inline fun <reified T> HttpRequestBuilder.appendSerializedCookieParameter(
@@ -107,10 +148,7 @@ public inline fun <reified T> HttpRequestBuilder.appendSerializedCookieParameter
     json: Json = Json
 ) {
     if (value == null) return
-    when (val e = json.encodeToJsonElement(value)) {
-        JsonNull -> return
-        is JsonPrimitive -> cookie(name, e.content)
-        is JsonArray -> cookie(name, e.mapNotNull { serializeInner(it) }.joinToString(","))
-        is JsonObject -> cookie(name, e.toString())
+    serializeForm(name, json.encodeToJsonElement(value), explode) { key, content ->
+        if (content != null) cookie(key, content)
     }
 }
