@@ -1,6 +1,6 @@
 package com.kroegerama.openapi.kmp.gen.companion
 
-import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import arrow.core.Either
 import arrow.core.getOrElse
 import io.ktor.client.call.body
@@ -30,7 +30,7 @@ public fun Throwable.asCallException(): CallException {
             cause = this
         )
 
-        is ContentConvertException -> SerializationException(
+        is ContentConvertException -> CallSerializationException(
             message = message,
             cause = this
         )
@@ -58,13 +58,13 @@ public suspend inline fun <T, reified E> EitherCallResponse<T>.typed(): EitherTy
             }
 
             is IOCallException -> callException
-            is SerializationException -> callException
+            is CallSerializationException -> callException
             is UnexpectedCallException -> callException
         }
     }
 }
 
-@Immutable
+@Stable
 public data class HttpCallResponse<out T>(
     val data: T,
     val raw: HttpResponse
@@ -75,10 +75,10 @@ public data class HttpCallResponse<out T>(
     val isSuccessful: Boolean = raw.status.isSuccess()
 }
 
-@Immutable
+@Stable
 public sealed interface TypedCallException<out E>
 
-@Immutable
+@Stable
 public sealed class CallException : RuntimeException(), TypedCallException<Nothing>
 
 public data class TypedHttpCallException<out E>(
@@ -99,7 +99,7 @@ public data class HttpCallException(
     val headers: Headers = raw.headers
 }
 
-public data class SerializationException(
+public data class CallSerializationException(
     override val message: String?,
     override val cause: ContentConvertException
 ) : CallException()
@@ -123,7 +123,7 @@ public inline fun TypedCallException<*>.onResponse(
     when (this) {
         is TypedHttpCallException<*> -> raw
         is HttpCallException -> raw
-        is SerializationException -> return
+        is CallSerializationException -> return
         is IOCallException -> return
         is UnexpectedCallException -> return
     }.let(block)
@@ -138,7 +138,7 @@ public inline fun TypedCallException<*>.onCode(
     when (this) {
         is TypedHttpCallException<*> -> code
         is HttpCallException -> code
-        is SerializationException -> return
+        is CallSerializationException -> return
         is IOCallException -> return
         is UnexpectedCallException -> return
     }.let(block)
