@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.raise.either
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.call.save
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.request
 import io.ktor.http.isSuccess
@@ -17,9 +18,12 @@ public suspend inline fun <reified T> HttpClient.eitherRequest(
         it.asCallException()
     }.bind()
     if (!response.status.isSuccess()) {
+        // Reached only when the default response validation is disabled (expectSuccess = false);
+        // otherwise Ktor already threw a ResponseException above. save() buffers the response so a
+        // later typed<E>() can still read the error body off a non-streaming copy.
         raise(
             HttpCallException(
-                raw = response,
+                raw = response.call.save().response,
                 cause = null
             )
         )
