@@ -1,5 +1,6 @@
 package com.kroegerama.openapi.kmp.gen.companion
 
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.io.encoding.Base64
 import kotlin.test.Test
@@ -76,6 +77,20 @@ class JWTTest {
         assertEquals(Instant.fromEpochSeconds(1704067200), jwt.notBefore)
         assertEquals(Instant.fromEpochSeconds(1704067200), jwt.issuedAt)
         assertEquals("id123", jwt.id)
+    }
+
+    @Test
+    fun testParseFractionalNumericDate() {
+        // RFC 7519 NumericDate may be non-integer; fractional seconds must be preserved.
+        val token = createToken(
+            """{"alg":"HS256"}""",
+            """{"exp":1516239022.5,"iat":1516239022}"""
+        )
+
+        val jwt = JWT.parse(token)
+
+        assertEquals(Instant.fromEpochSeconds(1516239022, 500_000_000), jwt.expiresAt)
+        assertEquals(Instant.fromEpochSeconds(1516239022), jwt.issuedAt)
     }
 
     @Test
@@ -235,6 +250,26 @@ class JWTTest {
 
         val jwt = JWT.parse(token)
         assertTrue(!jwt.isTimeValid())
+    }
+
+    @Test
+    fun testAudienceSerializeSingle() {
+        val payload = JWTPayload(aud = listOf("api.example.com"))
+        val json = Json.encodeToString(payload)
+
+        // A single audience is written as a bare string, and round-trips.
+        assertTrue(""""aud":"api.example.com"""" in json, "Actual: $json")
+        assertEquals(payload, Json.decodeFromString<JWTPayload>(json))
+    }
+
+    @Test
+    fun testAudienceSerializeMultiple() {
+        val payload = JWTPayload(aud = listOf("api.example.com", "admin.example.com"))
+        val json = Json.encodeToString(payload)
+
+        // Multiple audiences are written as an array, and round-trip.
+        assertTrue(""""aud":["api.example.com","admin.example.com"]""" in json, "Actual: $json")
+        assertEquals(payload, Json.decodeFromString<JWTPayload>(json))
     }
 
     @Test

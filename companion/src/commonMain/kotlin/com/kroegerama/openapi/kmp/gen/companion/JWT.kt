@@ -13,10 +13,13 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlin.io.encoding.Base64
+import kotlin.math.floor
+import kotlin.math.roundToLong
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -51,9 +54,9 @@ public class JWT private constructor(
     public val issuer: String? = payload.iss
     public val subject: String? = payload.sub
     public val audience: List<String>? = payload.aud
-    public val expiresAt: Instant? = payload.exp?.let { Instant.fromEpochSeconds(it) }
-    public val notBefore: Instant? = payload.nbf?.let { Instant.fromEpochSeconds(it) }
-    public val issuedAt: Instant? = payload.iat?.let { Instant.fromEpochSeconds(it) }
+    public val expiresAt: Instant? = payload.exp?.let(::numericDateToInstant)
+    public val notBefore: Instant? = payload.nbf?.let(::numericDateToInstant)
+    public val issuedAt: Instant? = payload.iat?.let(::numericDateToInstant)
     public val id: String? = payload.jti
 
     public fun getClaim(name: String): JsonElement? = claims[name]
@@ -137,8 +140,20 @@ public class JWT private constructor(
     }
 }
 
+/**
+ * Converts a JWT `NumericDate` (seconds since epoch, per RFC 7519) to an [Instant].
+ *
+ * The value is a JSON number that may be non-integer, so any fractional seconds are carried
+ * into the nanosecond component. [floor] is used so negative values (pre-epoch) round correctly.
+ */
+private fun numericDateToInstant(seconds: Double): Instant {
+    val wholeSeconds = floor(seconds).toLong()
+    val nanoAdjustment = ((seconds - wholeSeconds) * 1_000_000_000).roundToLong()
+    return Instant.fromEpochSeconds(wholeSeconds, nanoAdjustment)
+}
+
 @Serializable
-public data class JWTPayload(
+internal data class JWTPayload(
     @SerialName("iss")
     val iss: String? = null,
     @SerialName("sub")
@@ -147,11 +162,11 @@ public data class JWTPayload(
     @Serializable(with = AudienceSerializer::class)
     val aud: List<String>? = null,
     @SerialName("exp")
-    val exp: Long? = null,
+    val exp: Double? = null,
     @SerialName("nbf")
-    val nbf: Long? = null,
+    val nbf: Double? = null,
     @SerialName("iat")
-    val iat: Long? = null,
+    val iat: Double? = null,
     @SerialName("jti")
     val jti: String? = null
 )
@@ -188,6 +203,15 @@ internal object AudienceSerializer : KSerializer<List<String>> {
     }
 
     override fun serialize(encoder: Encoder, value: List<String>) {
-        throw UnsupportedOperationException()
+        val jsonEncoder = encoder as? JsonEncoder
+            ?: throw SerializationException("AudienceSerializer can be used only with JSON")
+
+        // Mirror the deserialize contract: a single audience is written as a bare
+        // string, multiple audiences as an array of strings.
+        val element = value.singleOrNull()
+            ?.let { JsonPrimitive(it) }
+            ?: JsonArray(value.map { JsonPrimitive(it) })
+
+        jsonEncoder.encodeJsonElement(element)
     }
 }
