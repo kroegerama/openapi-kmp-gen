@@ -2,6 +2,8 @@ package com.kroegerama.openapi.kmp.gen.companion
 
 import io.ktor.client.request.HttpRequestBuilder
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -11,6 +13,9 @@ class SerializerUtilsTest {
 
     @Serializable
     private data class Color(val R: Int, val G: Int, val B: Int)
+
+    @Serializable
+    private data class WithNull(val a: String?, val b: Int)
 
     private val color = Color(R = 100, G = 200, B = 150)
 
@@ -43,6 +48,82 @@ class SerializerUtilsTest {
     fun pathNull() {
         val nothing: String? = null
         assertEquals("", createSerializedPathSegment(nothing))
+    }
+
+    @Test
+    fun pathArraySkipsNullElements() {
+        assertEquals("blue,brown", createSerializedPathSegment(listOf("blue", null, "brown")))
+    }
+
+    @Test
+    fun pathObjectWithNullValues() {
+        // default Json writes explicit nulls; simple style renders them as empty values
+        assertEquals("a,,b,1", createSerializedPathSegment(WithNull(a = null, b = 1), explode = false))
+        assertEquals("a=,b=1", createSerializedPathSegment(WithNull(a = null, b = 1), explode = true))
+    }
+
+    @Test
+    fun appendPathSegmentAppendsToUrl() {
+        val builder = HttpRequestBuilder()
+        builder.appendSerializedPathSegment(listOf("blue", "black"))
+        assertEquals("blue,black", builder.url.pathSegments.last())
+    }
+
+    @Test
+    fun encodeToPrimitiveStringPrimitives() {
+        // strings are unquoted, other primitives use their JSON text
+        assertEquals("blue", Json.encodeToPrimitiveString("blue"))
+        assertEquals("5", Json.encodeToPrimitiveString(5))
+        assertEquals("true", Json.encodeToPrimitiveString(true))
+    }
+
+    @Test
+    fun encodeToPrimitiveStringComposites() {
+        assertEquals("""["a","b"]""", Json.encodeToPrimitiveString(listOf("a", "b")))
+        assertEquals("""{"R":100,"G":200,"B":150}""", Json.encodeToPrimitiveString(color))
+    }
+
+    @Test
+    fun encodeToPrimitiveStringNulls() {
+        assertNull(Json.encodeToPrimitiveString<String?>(null))
+        assertNull(Json.encodeToPrimitiveString(JsonNull))
+    }
+
+    @Test
+    fun nullValuesAreSkippedEverywhere() {
+        val builder = HttpRequestBuilder()
+        val nothing: String? = null
+        builder.appendSerializedPathSegment(nothing)
+        builder.appendSerializedQueryParameter("q", nothing)
+        builder.appendSerializedHeaderParameter("X-Q", nothing)
+        builder.appendSerializedCookieParameter("c", nothing)
+        assertEquals(emptyList(), builder.url.pathSegments.filter { it.isNotEmpty() })
+        assertNull(builder.url.parameters["q"])
+        assertNull(builder.headers["X-Q"])
+        assertNull(builder.headers["Cookie"])
+    }
+
+    @Test
+    fun headerPrimitiveAndArray() {
+        val builder = HttpRequestBuilder()
+        builder.appendSerializedHeaderParameter("X-P", "v")
+        builder.appendSerializedHeaderParameter("X-A", listOf("a", "b"))
+        assertEquals("v", builder.headers["X-P"])
+        assertEquals("a,b", builder.headers["X-A"])
+    }
+
+    @Test
+    fun queryPrimitive() {
+        val builder = HttpRequestBuilder()
+        builder.appendSerializedQueryParameter("q", 5)
+        assertEquals("5", builder.url.parameters["q"])
+    }
+
+    @Test
+    fun queryArrayExplodedSkipsNullElements() {
+        val builder = HttpRequestBuilder()
+        builder.appendSerializedQueryParameter("c", listOf("blue", null), explode = true)
+        assertEquals(listOf("blue"), builder.url.parameters.getAll("c"))
     }
 
     @Test

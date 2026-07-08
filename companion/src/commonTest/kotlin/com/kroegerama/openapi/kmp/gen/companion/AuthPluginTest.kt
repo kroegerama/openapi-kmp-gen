@@ -110,6 +110,30 @@ class AuthPluginTest {
     }
 
     @Test
+    fun resolverReceivesRequestedKeysInOrder() = runTest {
+        val seen = mutableListOf<String>()
+        captureRequest(
+            resolver = { key ->
+                seen += key
+                null
+            }
+        ) {
+            authKeys("a", "b", "a")
+        }
+        assertEquals(listOf("a", "b", "a"), seen)
+    }
+
+    @Test
+    fun partiallyResolvedKeysApplyOnlyResolved() = runTest {
+        val request = captureRequest(
+            resolver = { key -> if (key == "good") AuthItem.Bearer("tok") else null }
+        ) {
+            authKeys("missing", "good")
+        }
+        assertEquals("Bearer tok", request.headers[HttpHeaders.Authorization])
+    }
+
+    @Test
     fun multipleKeysAllApplied() = runTest {
         val request = captureRequest(
             resolver = { key ->

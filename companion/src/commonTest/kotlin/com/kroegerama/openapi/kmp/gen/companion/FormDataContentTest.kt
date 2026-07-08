@@ -1,6 +1,14 @@
 package com.kroegerama.openapi.kmp.gen.companion
 
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.client.engine.mock.toByteArray
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -21,6 +29,12 @@ class FormDataContentTest {
     private data class Nested(
         val id: Int,
         val tags: List<String>
+    )
+
+    @Serializable
+    private data class WithDefault(
+        val name: String,
+        val role: String = "user"
     )
 
     @Test
@@ -71,5 +85,38 @@ class FormDataContentTest {
     fun multiPartConstructsForObject() {
         val content = Form(name = "Alice", age = 30).asMultiPartFormDataContent()
         assertTrue(content.contentType.toString().startsWith("multipart/form-data"))
+    }
+
+    @Test
+    fun multiPartEncodesValues() = runTest {
+        var body = ""
+        val client = HttpClient(MockEngine) {
+            engine {
+                addHandler { request ->
+                    body = request.body.toByteArray().decodeToString()
+                    respond("ok")
+                }
+            }
+        }
+        client.post("https://example.com/upload") {
+            setBody(Form(name = "Alice", age = 30).asMultiPartFormDataContent())
+        }
+        client.close()
+
+        assertTrue("""name="name"""" in body, body)
+        assertTrue("Alice" in body, body)
+        assertTrue("""name="age"""" in body, body)
+        assertTrue("30" in body, body)
+        assertFalse("""name="nickname"""" in body, body)
+    }
+
+    @Test
+    fun formDataUsesProvidedJson() {
+        // the default Json omits defaulted properties; a caller-provided Json controls encoding
+        val default = WithDefault(name = "Alice").asFormDataContent()
+        assertNull(default.formData["role"])
+
+        val withDefaults = WithDefault(name = "Alice").asFormDataContent(Json { encodeDefaults = true })
+        assertEquals("user", withDefaults.formData["role"])
     }
 }

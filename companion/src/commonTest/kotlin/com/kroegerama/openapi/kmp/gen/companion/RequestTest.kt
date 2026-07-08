@@ -114,6 +114,34 @@ class RequestTest {
     }
 
     @Test
+    fun typedDecodesErrorBodyManualBranch() = runTest {
+        // expectSuccess = false -> the manual guard in eitherRequest save()s the response,
+        // so typed() must still be able to read the error body afterwards
+        val client = jsonClient(expectSuccess = false) {
+            respond("""{"code":"NOT_FOUND"}""", HttpStatusCode.NotFound, jsonContentType)
+        }
+        val result = client.eitherRequest<Dto> { url("https://example.com/dto") }
+            .typed<Dto, ApiError>()
+        val left = result.leftOrNull()
+        assertTrue(left is TypedHttpCallException<*>, left.toString())
+        assertEquals(ApiError("NOT_FOUND"), left.error)
+        assertEquals(404, left.code)
+    }
+
+    @Test
+    fun typedFallsBackWhenErrorBodyUndecodable() = runTest {
+        // the error body does not match ApiError -> typed() keeps the original HttpCallException
+        val client = jsonClient {
+            respond("""{"unexpected":1}""", HttpStatusCode.NotFound, jsonContentType)
+        }
+        val result = client.eitherRequest<Dto> { url("https://example.com/dto") }
+            .typed<Dto, ApiError>()
+        val left = result.leftOrNull()
+        assertTrue(left is HttpCallException, left.toString())
+        assertEquals(404, left.code)
+    }
+
+    @Test
     fun typedKeepsSuccess() = runTest {
         val client = jsonClient {
             respond("""{"value":42}""", HttpStatusCode.OK, jsonContentType)

@@ -1,11 +1,13 @@
 package com.kroegerama.openapi.kmp.gen.companion
 
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.io.encoding.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -250,6 +252,80 @@ class JWTTest {
 
         val jwt = JWT.parse(token)
         assertTrue(!jwt.isTimeValid())
+    }
+
+    @Test
+    fun testParsePreEpochFractionalNumericDate() {
+        // floor-based conversion must round pre-epoch fractional values towards negative infinity
+        val token = createToken(
+            """{"alg":"HS256"}""",
+            """{"exp":-0.5}"""
+        )
+
+        val jwt = JWT.parse(token)
+
+        assertEquals(Instant.fromEpochSeconds(-1, 500_000_000), jwt.expiresAt)
+    }
+
+    @Test
+    fun testSignatureIsPreserved() {
+        val token = createToken("""{"alg":"HS256"}""", """{"sub":"user"}""", signature = "my-signature")
+        val jwt = JWT.parse(token)
+
+        // the third token part is kept verbatim (still base64), not decoded
+        assertEquals(encode("my-signature"), jwt.signature)
+    }
+
+    @Test
+    fun testNegativeLeewayThrows() {
+        val token = createToken("""{"alg":"HS256"}""", """{"exp":1000000000}""")
+        val jwt = JWT.parse(token)
+
+        assertFailsWith<IllegalArgumentException> { jwt.isExpired(leeway = -1) }
+        assertFailsWith<IllegalArgumentException> { jwt.isTimeValid(leeway = -1) }
+    }
+
+    @Test
+    fun testTimeChecksWithoutTimeClaims() {
+        val token = createToken("""{"alg":"HS256"}""", """{"sub":"user"}""")
+        val jwt = JWT.parse(token)
+
+        // a token without exp/nbf/iat is never expired and always time-valid
+        assertFalse(jwt.isExpired())
+        assertTrue(jwt.isTimeValid())
+    }
+
+    @Test
+    fun testParseAudienceInvalidTypes() {
+        val invalidAudiences = listOf(
+            "123",
+            "true",
+            """{"a":1}""",
+            "[1,2]",
+            """["ok",false]"""
+        )
+
+        for (aud in invalidAudiences) {
+            val token = createToken("""{"alg":"HS256"}""", """{"aud":$aud}""")
+            assertFailsWith<SerializationException>("Expected failure for aud: $aud") {
+                JWT.parse(token)
+            }
+            assertNull(JWT.parseOrNull(token), "Expected null for aud: $aud")
+        }
+    }
+
+    @Test
+    fun testToHumanReadableString() {
+        val token = createToken(
+            """{"alg":"HS256"}""",
+            """{"iss":"issuer","sub":"subject","role":"admin"}"""
+        )
+        val jwt = JWT.parse(token)
+        val readable = jwt.toHumanReadableString()
+
+        assertTrue("issuer=issuer" in readable, readable)
+        assertTrue("subject=subject" in readable, readable)
+        assertTrue("role" in readable, readable)
     }
 
     @Test
