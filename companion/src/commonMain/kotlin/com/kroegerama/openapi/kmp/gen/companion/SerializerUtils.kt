@@ -22,19 +22,19 @@ import kotlinx.serialization.json.encodeToJsonElement
 public inline fun <reified T> Json.encodeToPrimitiveString(value: T): String? {
     if (value == null) return null
     return when (val e = encodeToJsonElement(value)) {
+        JsonNull -> null
         is JsonPrimitive -> e.content
         is JsonArray -> e.toString()
         is JsonObject -> e.toString()
-        JsonNull -> null
     }
 }
 
 @PublishedApi
 internal fun serializeInner(inner: JsonElement): String? = when (inner) {
+    JsonNull -> null
     is JsonPrimitive -> inner.content
     is JsonArray -> inner.toString()
     is JsonObject -> inner.toString()
-    JsonNull -> null
 }
 
 /**
