@@ -27,8 +27,8 @@ It comes with support for KMP and the targets JVM, Android, iOS, macOS, Windows 
 
 ### Example
 
-Using the [testspec.yaml](generated/testspec.yaml) file, the following code will be generated:
-[generated/src](generated/src/commonMain/kotlin/com/kroegerama/kmp/gen/generated)
+- OpenAPI 3.0 [testspec_30.yaml](generated/testspec_30.yaml) will generate: [generated_30](generated/src/commonMain/kotlin/com/kroegerama/kmp/gen/generated30)
+- OpenAPI 3.1 [testspec_31.yaml](generated/testspec_31.yaml) will generate: [generated_31](generated/src/commonMain/kotlin/com/kroegerama/kmp/gen/generated31)
 
 ## Technologies used
 
@@ -99,6 +99,8 @@ kmpgen {
 The companion library is automatically added as a dependency, when the plugin is added.
 It centralizes the most important building blocks, all generated apis need.
 The library can be used by any project (KMP or non-KMP).
+
+- [Companion Readme](companion/README.md)
 
 ```toml
 [versions]
