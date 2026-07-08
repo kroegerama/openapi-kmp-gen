@@ -8,23 +8,28 @@ import io.ktor.http.Url
 import io.ktor.http.takeFrom
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.update
 
 public typealias AuthItemProvider = suspend () -> AuthItem?
 
+@OptIn(ExperimentalAtomicApi::class)
 public abstract class ApiHolder {
     public abstract var baseUrl: Url
 
-    public lateinit var json: Json
+    public var json: Json = createDefaultJson()
         private set
 
-    public lateinit var client: HttpClient
-        private set
+    private var _client: HttpClient? = null
+    public val client: HttpClient
+        get() {
+            _client?.let { return it }
+            updateClient()
+            return _client!!
+        }
 
-    protected val authProviderMap: MutableMap<String, AuthItemProvider> = mutableMapOf()
-
-    init {
-        updateClient()
-    }
+    private val authProviders: AtomicReference<Map<String, AuthItemProvider>> = AtomicReference(emptyMap())
 
     public open fun HttpClientConfig<PlatformHttpClientEngineConfig>.apiConfig() {
         install(ContentNegotiation) {
@@ -35,7 +40,7 @@ public abstract class ApiHolder {
         }
         install(AuthPlugin) {
             authItem { key ->
-                authProviderMap[key]?.invoke()
+                authProviders.load()[key]?.invoke()
             }
         }
     }
@@ -46,27 +51,31 @@ public abstract class ApiHolder {
         withCookies: Boolean = false,
         withCompression: Boolean = false,
         withLogging: Boolean = false,
+        sanitizeHeaders: Set<String> = defaultSensitiveHeaders,
         createHttpClient: (decorator: HttpClientConfig<PlatformHttpClientEngineConfig>.() -> Unit) -> HttpClient = ::createPlatformHttpClient,
         decorator: HttpClientConfig<PlatformHttpClientEngineConfig>.() -> Unit = {}
     ) {
         this.json = json
-        client = createHttpClient {
+        val previous = _client
+        _client = createHttpClient {
             defaultConfig(
                 withCookies = withCookies,
                 userAgent = userAgent,
                 withContentEncoding = withCompression,
-                withLogging = withLogging
+                withLogging = withLogging,
+                sanitizeHeaders = sanitizeHeaders
             )
             apiConfig()
             decorator()
         }
+        previous?.close()
     }
 
     protected fun setAuthProvider(id: String, provider: AuthItemProvider) {
-        authProviderMap[id] = provider
+        authProviders.update { it + (id to provider) }
     }
 
     protected fun clearAuthProvider(id: String) {
-        authProviderMap.remove(id)
+        authProviders.update { it - id }
     }
 }
