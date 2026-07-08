@@ -25,7 +25,7 @@ public object Base64Serializer : KSerializer<ByteArray> {
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("com.kroegerama.openapi.kmp.gen.companion.Base64Serializer", PrimitiveKind.STRING)
 
-    override fun serialize(encoder: Encoder, `value`: ByteArray): Unit = encoder.encodeString(Base64.encode(value))
+    override fun serialize(encoder: Encoder, value: ByteArray): Unit = encoder.encodeString(Base64.encode(value))
     override fun deserialize(decoder: Decoder): ByteArray = Base64.decode(decoder.decodeString())
 }
 
@@ -57,9 +57,9 @@ public class ImmutableListSerializer<T>(
     private val listSerializer: KSerializer<List<T>> = ListSerializer(elementSerializer)
 
     override val descriptor: SerialDescriptor =
-        SerialDescriptor("ImmutableList", listSerializer.descriptor)
+        SerialDescriptor("com.kroegerama.openapi.kmp.gen.companion.ImmutableListSerializer", listSerializer.descriptor)
 
-    override fun serialize(encoder: Encoder, value: ImmutableList<T>): Unit = listSerializer.serialize(encoder, value.toList())
+    override fun serialize(encoder: Encoder, value: ImmutableList<T>): Unit = listSerializer.serialize(encoder, value)
     override fun deserialize(decoder: Decoder): ImmutableList<T> = listSerializer.deserialize(decoder).toImmutableList()
 }
 
