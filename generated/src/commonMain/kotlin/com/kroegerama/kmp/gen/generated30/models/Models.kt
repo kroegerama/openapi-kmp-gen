@@ -6,7 +6,7 @@
  * Version 1.0.0-SNAPSHOT
  * 
  * Generated Mon, 1 Jun 2026 13:00:00 GMT
- * OpenAPI KMP Gen (version 1.5.0) by kroegerama
+ * OpenAPI KMP Gen (version 1.6.0) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
@@ -36,7 +36,8 @@ import kotlinx.serialization.json.JsonClassDiscriminator
 /**
  * @param attr1 nullable=false -> not null
  * @param attr2 required -> not null
- * @param attr3 has null type -> nullable
+ * @param attr3 nullable=true -> nullable
+ * @param attr4 required + nullable=true -> nullable
  */
 @Serializable
 @Immutable
@@ -52,10 +53,27 @@ public data class NullableAttrTest(
   @SerialName("attr2")
   public val attr2: Photo,
   /**
-   * has null type -> nullable
+   * nullable=true -> nullable
    */
   @SerialName("attr3")
   public val attr3: Photo? = null,
+  /**
+   * required + nullable=true -> nullable
+   */
+  @SerialName("attr4")
+  public val attr4: Photo? = null,
+  @SerialName("attr5")
+  public val attr5: NullableInlineObject? = null,
+)
+
+/**
+ * nullable inline object -> class, nullable at reference sites
+ */
+@Serializable
+@Immutable
+public data class NullableInlineObject(
+  @SerialName("value")
+  public val `value`: String? = null,
 )
 
 @Serializable
@@ -193,11 +211,6 @@ public data class SealedClass2Child2(
 ) : SealedClass2
 
 public typealias DateTime = SerializableISO8601Instant
-
-/**
- * Nullable Photo via anyOf
- */
-public typealias NullableTestAnyOfTypealias = Photo?
 
 /**
  * Nullable Photo via allOf

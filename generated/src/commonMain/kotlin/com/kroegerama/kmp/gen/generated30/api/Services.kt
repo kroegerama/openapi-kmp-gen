@@ -6,7 +6,7 @@
  * Version 1.0.0-SNAPSHOT
  * 
  * Generated Mon, 1 Jun 2026 13:00:00 GMT
- * OpenAPI KMP Gen (version 1.5.0) by kroegerama
+ * OpenAPI KMP Gen (version 1.6.0) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
@@ -31,6 +31,7 @@ import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.http.appendPathSegments
@@ -149,6 +150,34 @@ public object DefaultApi {
     url.appendPathSegments(
       "defaultValue",
     )
+    decorator()
+  }
+
+  /**
+   * `GET /rawResponse`
+   *
+   * @return media type without schema -> raw response, not null
+   */
+  public suspend fun rawResponse(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<HttpResponse>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("GET")
+    url.appendPathSegments(
+      "rawResponse",
+    )
+    decorator()
+  }
+
+  /**
+   * `POST /nullableBody`
+   *
+   * @return required body with nullable=true -> nullable body parameter
+   */
+  public suspend fun nullableBody(body: Photo? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("POST")
+    contentType(ContentType.Application.Json)
+    url.appendPathSegments(
+      "nullableBody",
+    )
+    setBody(body)
     decorator()
   }
 

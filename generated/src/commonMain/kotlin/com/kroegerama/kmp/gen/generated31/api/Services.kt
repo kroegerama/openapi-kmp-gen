@@ -6,7 +6,7 @@
  * Version 1.0.0-SNAPSHOT
  * 
  * Generated Mon, 1 Jun 2026 13:00:00 GMT
- * OpenAPI KMP Gen (version 1.5.0) by kroegerama
+ * OpenAPI KMP Gen (version 1.6.0) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
@@ -18,6 +18,7 @@ import com.kroegerama.kmp.gen.generated31.Auth
 import com.kroegerama.kmp.gen.generated31.models.DateTime
 import com.kroegerama.kmp.gen.generated31.models.DefaultValue
 import com.kroegerama.kmp.gen.generated31.models.IntegerTest
+import com.kroegerama.kmp.gen.generated31.models.NullableResponse200Response
 import com.kroegerama.kmp.gen.generated31.models.NumberTest
 import com.kroegerama.kmp.gen.generated31.models.Photo
 import com.kroegerama.kmp.gen.generated31.models.SerialTest
@@ -31,6 +32,7 @@ import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.http.appendPathSegments
@@ -149,6 +151,60 @@ public object DefaultApi {
     url.appendPathSegments(
       "defaultValue",
     )
+    decorator()
+  }
+
+  /**
+   * `GET /nullableResponse`
+   *
+   * @return OK
+   */
+  public suspend fun nullableResponse(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<NullableResponse200Response?>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("GET")
+    url.appendPathSegments(
+      "nullableResponse",
+    )
+    decorator()
+  }
+
+  /**
+   * `GET /rawResponse`
+   *
+   * @return media type without schema -> raw response, not null
+   */
+  public suspend fun rawResponse(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<HttpResponse>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("GET")
+    url.appendPathSegments(
+      "rawResponse",
+    )
+    decorator()
+  }
+
+  /**
+   * `GET /nullableBinaryResponse`
+   *
+   * @return nullable non-json schema -> raw response, not null
+   */
+  public suspend fun nullableBinaryResponse(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<HttpResponse>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("GET")
+    url.appendPathSegments(
+      "nullableBinaryResponse",
+    )
+    decorator()
+  }
+
+  /**
+   * `POST /nullableBody`
+   *
+   * @return required body with null type variant -> nullable body parameter
+   */
+  public suspend fun nullableBody(body: Photo? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("POST")
+    contentType(ContentType.Application.Json)
+    url.appendPathSegments(
+      "nullableBody",
+    )
+    setBody(body)
     decorator()
   }
 

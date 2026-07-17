@@ -99,6 +99,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DefaultValue'
+  /rawResponse:
+    get:
+      operationId: rawResponse
+      responses:
+        200:
+          description: media type without schema -> raw response, not null
+          content:
+            application/octet-stream: { }
+  /nullableBody:
+    post:
+      operationId: nullableBody
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/Photo'
+              nullable: true
+      responses:
+        204:
+          description: required body with nullable=true -> nullable body parameter
   /listBody:
     post:
       operationId: listBody
@@ -205,7 +227,7 @@ components:
       type: string
       format: date-time
     NullableAttrTest:
-      required: [ attr2 ]
+      required: [ attr2, attr4, attr5 ]
       properties:
         attr1:
           allOf:
@@ -217,15 +239,24 @@ components:
             - $ref: '#/components/schemas/Photo'
           description: required -> not null
         attr3:
-          anyOf:
+          allOf:
             - $ref: '#/components/schemas/Photo'
-            - type: "null"
-          description: has null type -> nullable
-    NullableTestAnyOfTypealias:
-      anyOf:
-        - $ref: "#/components/schemas/Photo"
-        - type: "null"
-      description: Nullable Photo via anyOf
+          nullable: true
+          description: nullable=true -> nullable
+        attr4:
+          allOf:
+            - $ref: '#/components/schemas/Photo'
+          nullable: true
+          description: required + nullable=true -> nullable
+        attr5:
+          $ref: '#/components/schemas/NullableInlineObject'
+    NullableInlineObject:
+      type: object
+      nullable: true
+      properties:
+        value:
+          type: string
+      description: nullable inline object -> class, nullable at reference sites
     NullableTestAllOfTypealias:
       allOf:
         - $ref: "#/components/schemas/Photo"

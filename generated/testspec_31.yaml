@@ -99,6 +99,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DefaultValue'
+  /nullableResponse:
+    get:
+      operationId: nullableResponse
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: "null"
+                  - type: object
+                    properties:
+                      payload:
+                        type: string
+  /rawResponse:
+    get:
+      operationId: rawResponse
+      responses:
+        200:
+          description: media type without schema -> raw response, not null
+          content:
+            application/octet-stream: { }
+  /nullableBinaryResponse:
+    get:
+      operationId: nullableBinaryResponse
+      responses:
+        200:
+          description: nullable non-json schema -> raw response, not null
+          content:
+            application/octet-stream:
+              schema:
+                type: [ string, "null" ]
+  /nullableBody:
+    post:
+      operationId: nullableBody
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: "null"
+                - $ref: '#/components/schemas/Photo'
+      responses:
+        204:
+          description: required body with null type variant -> nullable body parameter
   /listBody:
     post:
       operationId: listBody
@@ -205,7 +252,7 @@ components:
       type: string
       format: date-time
     NullableAttrTest:
-      required: [ attr1, attr2 ]
+      required: [ attr1, attr2, attr4, attr5, attr6, attr7, attr8, attr9, attr10, attr11, attr12 ]
       properties:
         attr1:
           $ref: '#/components/schemas/Photo'
@@ -219,11 +266,168 @@ components:
             - $ref: '#/components/schemas/Photo'
             - type: "null"
           description: has null type -> nullable
+        attr4:
+          oneOf:
+            - type: "null"
+            - description: required oneOf with null type -> nullable
+              $ref: '#/components/schemas/Photo'
+        attr5:
+          oneOf:
+            - type: "null"
+            - type: string
+          description: required oneOf with null type and primitive -> nullable String
+        attr6:
+          oneOf:
+            - type: "null"
+            - type: object
+              properties:
+                innerAttr:
+                  type: string
+          description: required oneOf with null type and inline object -> nullable generated class
+        attr7:
+          oneOf:
+            - type: "null"
+            - allOf:
+                - $ref: '#/components/schemas/Photo'
+          description: required oneOf with null type around single allOf -> nullable
+        attr8:
+          type: [ string, "null" ]
+          description: required with null in type list -> nullable
+        attr9:
+          type: array
+          items:
+            oneOf:
+              - type: "null"
+              - $ref: '#/components/schemas/Photo'
+          description: required array with nullable items via oneOf
+        attr10:
+          $ref: '#/components/schemas/NullableInlineObject'
+          description: required ref to intrinsically nullable named schema -> nullable
+        attr11:
+          $ref: '#/components/schemas/NullableExtendedPhoto'
+          description: required ref to nullable schema with merged properties -> nullable
+        attr12:
+          oneOf:
+            - type: "null"
+            - description: deprecated oneOf variant -> deprecated nullable property
+              deprecated: true
+              $ref: '#/components/schemas/Photo'
+    NullableExtendedPhoto:
+      oneOf:
+        - type: "null"
+        - $ref: '#/components/schemas/Photo'
+      properties:
+        siblingAttr:
+          type: string
+      description: oneOf with null type and sibling properties -> object with merged properties
+    MergedRequiredTest:
+      oneOf:
+        - type: "null"
+        - type: object
+          required: [ innerRequired ]
+          properties:
+            innerRequired:
+              type: string
+      properties:
+        outerAttr:
+          type: string
+      description: variant required list is merged -> innerRequired stays non-null
+    NullableInlineObject:
+      oneOf:
+        - type: "null"
+        - type: object
+          properties:
+            value:
+              type: string
+      description: named oneOf with null type and inline object -> class, nullable at reference sites
+    NullableRefTypealias:
+      $ref: '#/components/schemas/NullableInlineObject'
+      description: ref to intrinsically nullable named schema -> nullable typealias
+    MergedNullableMember:
+      allOf:
+        - $ref: '#/components/schemas/Photo'
+        - oneOf:
+            - type: "null"
+            - type: object
+              properties:
+                mergedAttr:
+                  type: string
+      description: allOf member wrapped in oneOf with null type -> object with merged properties
     NullableTestAnyOfTypealias:
       anyOf:
         - $ref: "#/components/schemas/Photo"
         - type: "null"
       description: Nullable Photo via anyOf
+    NullableTestOneOfTypealias:
+      oneOf:
+        - $ref: "#/components/schemas/Photo"
+        - type: "null"
+      description: Nullable Photo via oneOf
+    CombinedAnyOf:
+      anyOf:
+        - $ref: '#/components/schemas/Photo'
+        - type: object
+          properties:
+            combinedExtraAttr:
+              type: string
+      description: anyOf without null type -> object with merged properties
+    ExtendedPhoto:
+      allOf:
+        - $ref: '#/components/schemas/Photo'
+      properties:
+        extendedAttr:
+          type: string
+        title:
+          description: annotation-only sibling redeclaration -> inherited type is kept
+      description: single allOf with sibling properties -> object with merged properties
+    NullableUnion:
+      oneOf:
+        - type: "null"
+        - $ref: '#/components/schemas/NullableUnionChildA'
+        - $ref: '#/components/schemas/NullableUnionChildB'
+      discriminator:
+        propertyName: kind
+        mapping:
+          a: '#/components/schemas/NullableUnionChildA'
+          b: '#/components/schemas/NullableUnionChildB'
+      description: oneOf with null type and multiple variants -> sealed interface without extra null child
+    NullableUnionChildA:
+      type: object
+      properties:
+        kind:
+          type: string
+        aValue:
+          type: string
+    NullableUnionChildB:
+      type: object
+      properties:
+        kind:
+          type: string
+        bValue:
+          type: integer
+          format: int32
+    DeprecatedUnion:
+      deprecated: true
+      oneOf:
+        - $ref: '#/components/schemas/DeprecatedUnionChildA'
+        - $ref: '#/components/schemas/DeprecatedUnionChildB'
+      discriminator:
+        propertyName: kind
+      description: deprecated oneOf -> deprecated sealed interface
+    DeprecatedUnionChildA:
+      type: object
+      properties:
+        kind:
+          type: string
+        aValue:
+          type: string
+    DeprecatedUnionChildB:
+      type: object
+      properties:
+        kind:
+          type: string
+        bValue:
+          type: string
     RefTypealias:
       $ref: "#/components/schemas/Photo"
     Photo:
