@@ -1,6 +1,6 @@
 [versions]
 agp = "9.2.1"
-kotlin = "2.4.0"
+kotlin = "2.4.10"
 android-minSdk = "21"
 android-compileSdk = "37"
 vanniktechMavenPublish = "0.37.0"
@@ -12,7 +12,7 @@ compose = "1.11.4"
 collections-immutable = "0.5.1"
 datetime = "0.8.0"
 desugar = "2.1.5"
-shadow = "9.5.1"
+shadow = "9.6.0"
 airline = "0.9"
 guava = "33.6.0-jre"
 kotlinpoet = "2.3.0"
@@ -21,7 +21,7 @@ gradle-publish = "2.1.1"
 versions = "0.54.0"
 slf4f = "2.0.18"
 logback-android = "3.0.0"
-logback-classic = "1.5.37"
+logback-classic = "1.5.38"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
