@@ -49,10 +49,11 @@ dependencies {
     coreLibraryDesugaring(libs.desugar)
 }
 
-val generate30 by tasks.registering(JavaExec::class) {
+val generate30 = tasks.register<JavaExec>("generate30") {
     dependsOn(project(":cli").tasks.named("shadowJar"))
 
     group = "kmpgen"
+    description = "Generate from OpenAPI 3.0 spec"
     inputs.files("testspec_30.yaml")
 
     val shadowJar = fileTree("../cli/build/libs") {
@@ -73,10 +74,11 @@ val generate30 by tasks.registering(JavaExec::class) {
     )
 }
 
-val generate31 by tasks.registering(JavaExec::class) {
+val generate31 = tasks.register<JavaExec>("generate31") {
     dependsOn(project(":cli").tasks.named("shadowJar"))
 
     group = "kmpgen"
+    description = "Generate from OpenAPI 3.1 spec"
     inputs.files("testspec_31.yaml")
 
     val shadowJar = fileTree("../cli/build/libs") {
@@ -100,4 +102,5 @@ val generate31 by tasks.registering(JavaExec::class) {
 tasks.register("generate") {
     dependsOn(generate30, generate31)
     group = "kmpgen"
+    description = "Generate from OpenAPI specs"
 }
