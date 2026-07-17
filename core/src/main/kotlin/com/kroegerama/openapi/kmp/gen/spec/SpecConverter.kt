@@ -205,12 +205,16 @@ class SpecConverter(
         }
         val requestBodyType = requestBodyEntry?.key?.let(::convertMimeType) ?: SpecOperation.Type.Default
         val request = requestBodyEntry?.let { (_, mediaType) ->
-            val schema = mediaType.schema
-            SpecOperation.SchemaInfo(
-                type = resolveSchema(schema),
-                nullable = requestBody.required != true,
-                description = requestBody.description
-            )
+            val schema: Schema<*>? = mediaType.schema
+            if (schema == null) {
+                null
+            } else {
+                SpecOperation.SchemaInfo(
+                    type = resolveSchema(schema),
+                    nullable = requestBody.required != true || schema.isNullable(spec, null),
+                    description = requestBody.description
+                )
+            }
         }
 
         val response = operation.responses?.let {
@@ -233,15 +237,16 @@ class SpecConverter(
 
             if (entry != null) {
                 val (mime, mediaType) = entry
-                val schema = mediaType.schema
-                val type = if (mime == Constants.MIME_TYPE_JSON) {
+                val schema: Schema<*>? = mediaType.schema
+                val type = if (mime == Constants.MIME_TYPE_JSON && schema != null) {
                     resolveSchema(schema)
                 } else {
                     SpecSchema.Raw
                 }
                 SpecOperation.SchemaInfo(
                     type = type,
-                    nullable = schema.isNullable(null),
+                    // Raw maps to the plain http response, which can never be null
+                    nullable = type != SpecSchema.Raw && schema != null && schema.isNullable(spec, null),
                     description = description
                 )
             } else {
@@ -304,32 +309,35 @@ class SpecConverter(
         )
     }
 
-    private fun resolveSchema(schema: Schema<*>): SpecSchema.SimpleType = when (val type = schema.getSpecType()) {
-        SpecSchemaType.Raw -> SpecSchema.AnyComplex
-        SpecSchemaType.Ref -> SpecSchema.Ref(
-            typeNames = schema.`$ref`.refAsTypeNames()
-        )
-
-        is SpecSchemaType.Primitive -> SpecSchema.Primitive(
-            type = type.type
-        )
-
-        SpecSchemaType.Array -> SpecSchema.Array(
-            items = resolveSchema(schema.items),
-            itemsNullable = schema.items.isNullable(null)
-        )
-
-        SpecSchemaType.Map -> {
-            val mapItemsSchema = schema.additionalProperties as Schema<*>
-            SpecSchema.Map(
-                items = resolveSchema(mapItemsSchema),
-                itemsNullable = mapItemsSchema.isNullable(null)
+    private fun resolveSchema(schema: Schema<*>): SpecSchema.SimpleType {
+        val effective = schema.effectiveSchema()
+        return when (val type = effective.getSpecType()) {
+            SpecSchemaType.Raw -> SpecSchema.AnyComplex
+            SpecSchemaType.Ref -> SpecSchema.Ref(
+                typeNames = effective.`$ref`.refAsTypeNames()
             )
-        }
 
-        SpecSchemaType.Enum,
-        SpecSchemaType.Object,
-        SpecSchemaType.Sealed -> SpecSchema.Raw
+            is SpecSchemaType.Primitive -> SpecSchema.Primitive(
+                type = type.type
+            )
+
+            SpecSchemaType.Array -> SpecSchema.Array(
+                items = resolveSchema(effective.items),
+                itemsNullable = effective.items.isNullable(spec, null)
+            )
+
+            SpecSchemaType.Map -> {
+                val mapItemsSchema = effective.additionalProperties as Schema<*>
+                SpecSchema.Map(
+                    items = resolveSchema(mapItemsSchema),
+                    itemsNullable = mapItemsSchema.isNullable(spec, null)
+                )
+            }
+
+            SpecSchemaType.Enum,
+            SpecSchemaType.Object,
+            SpecSchemaType.Sealed -> SpecSchema.Raw
+        }
     }
 
     private fun convertParameterType(parameter: Parameter): SpecParameter.Type = when (parameter) {
@@ -369,11 +377,44 @@ class SpecConverter(
         schemaNameEvaluator: SchemaNameEvaluator,
         schemaEmitter: SchemaEmitter
     ): SpecSchema.NamedSpecSchema {
+        val effective = schema.effectiveSchema()
+        if (effective !== schema) {
+            val converted = convertNamedSchema(
+                typeNames = typeNames,
+                schema = effective,
+                schemaNameEvaluator = schemaNameEvaluator,
+                schemaEmitter = schemaEmitter
+            )
+            val deprecated = schema.deprecated ?: converted.deprecated
+            val description = schema.fullDescription() ?: converted.description
+            return when (converted) {
+                is SpecSchema.Typealias -> converted.copy(
+                    deprecated = deprecated,
+                    nullable = converted.nullable || schema.isNullable(spec, null),
+                    description = description
+                )
+
+                is SpecSchema.Enum -> converted.copy(
+                    deprecated = deprecated,
+                    description = description
+                )
+
+                is SpecSchema.Object -> converted.copy(
+                    deprecated = deprecated,
+                    description = description
+                )
+
+                is SpecSchema.Sealed -> converted.copy(
+                    deprecated = deprecated,
+                    description = description
+                )
+            }
+        }
         return when (val type = schema.getSpecType()) {
             SpecSchemaType.Raw -> SpecSchema.Typealias(
                 typeNames = typeNames,
                 deprecated = schema.deprecated ?: false,
-                nullable = schema.isNullable(null),
+                nullable = schema.isNullable(spec, null),
                 schema = SpecSchema.AnyComplex,
                 description = schema.fullDescription()
             )
@@ -382,7 +423,7 @@ class SpecConverter(
                 typeNames = typeNames,
                 deprecated = schema.deprecated ?: false,
                 description = schema.fullDescription(),
-                nullable = schema.isNullable(null),
+                nullable = schema.isNullable(spec, null),
                 schema = SpecSchema.Ref(
                     typeNames = schema.`$ref`.refAsTypeNames()
                 )
@@ -391,7 +432,7 @@ class SpecConverter(
             is SpecSchemaType.Primitive -> SpecSchema.Typealias(
                 typeNames = typeNames,
                 deprecated = schema.deprecated ?: false,
-                nullable = schema.isNullable(null),
+                nullable = schema.isNullable(spec, null),
                 description = schema.fullDescription(),
                 schema = SpecSchema.Primitive(
                     type = type.type
@@ -402,7 +443,7 @@ class SpecConverter(
                 typeNames = typeNames,
                 deprecated = schema.deprecated ?: false,
                 description = schema.fullDescription(),
-                nullable = schema.isNullable(null),
+                nullable = schema.isNullable(spec, null),
                 schema = SpecSchema.Array(
                     items = convertSimpleType(
                         parentTypeNames = typeNames,
@@ -411,7 +452,7 @@ class SpecConverter(
                         schemaNameEvaluator = schemaNameEvaluator,
                         schemaEmitter = schemaEmitter
                     ),
-                    itemsNullable = schema.items.isNullable(null)
+                    itemsNullable = schema.items.isNullable(spec, null)
                 )
             )
 
@@ -421,7 +462,7 @@ class SpecConverter(
                     typeNames = typeNames,
                     deprecated = schema.deprecated ?: false,
                     description = schema.fullDescription(),
-                    nullable = schema.isNullable(null),
+                    nullable = schema.isNullable(spec, null),
                     schema = SpecSchema.Map(
                         items = convertSimpleType(
                             parentTypeNames = typeNames,
@@ -430,7 +471,7 @@ class SpecConverter(
                             schemaNameEvaluator = schemaNameEvaluator,
                             schemaEmitter = schemaEmitter
                         ),
-                        itemsNullable = mapItemsSchema.isNullable(null)
+                        itemsNullable = mapItemsSchema.isNullable(spec, null)
                     )
                 )
             }
@@ -461,7 +502,8 @@ class SpecConverter(
         val discriminator: Discriminator? = schema.discriminator
         val children = mutableListOf<SpecSchema.NamedSpecSchema>()
 
-        val types: List<SpecSchema.Ref> = schema.oneOf.mapIndexed { index, item ->
+        val types: List<SpecSchema.Ref> = schema.oneOf.filterNot { it.isNullType() }.mapIndexed { index, rawItem ->
+            val item = rawItem.effectiveSchema()
             if (item.`$ref` != null) {
                 val mappedName = discriminator?.mapping.orEmpty().entries.firstOrNull { (name, ref) ->
                     ref == item.`$ref`
@@ -497,7 +539,7 @@ class SpecConverter(
 
         val sealed = SpecSchema.Sealed(
             typeNames = typeNames,
-            deprecated = false,
+            deprecated = schema.deprecated ?: false,
             discriminator = discriminatorPropertyName,
             types = types,
             children = children,
@@ -511,7 +553,9 @@ class SpecConverter(
         typeNames: List<String>,
         schema: Schema<*>
     ): SpecSchema.Object {
+        schema.requireMergeableVariant(spec) { typeNames.joinToString(".") }
         val children = mutableListOf<SpecSchema.NamedSpecSchema>()
+        val requiredNames = schema.resolveRequired(spec)
         val properties = schema.resolveProperties(
             spec = spec,
             ignoreProperties = ignoredProperties[typeNames].orEmpty()
@@ -519,9 +563,10 @@ class SpecConverter(
             SpecProperty(
                 name = propertyName.asFieldName(),
                 rawName = propertyName,
-                deprecated = propertySchema.deprecated ?: false,
+                deprecated = propertySchema.deprecated ?: propertySchema.effectiveSchema().deprecated ?: false,
                 nullable = propertySchema.isNullable(
-                    schema.required.orEmpty().contains(propertyName)
+                    spec = spec,
+                    required = propertyName in requiredNames
                 ),
                 type = convertSimpleType(
                     parentTypeNames = typeNames,
@@ -530,7 +575,7 @@ class SpecConverter(
                     schemaNameEvaluator = { it },
                     schemaEmitter = { children += it }
                 ),
-                description = propertySchema.fullDescription()
+                description = propertySchema.fullDescription() ?: propertySchema.effectiveSchema().fullDescription()
             )
         }
         return SpecSchema.Object(
@@ -549,11 +594,12 @@ class SpecConverter(
         schemaNameEvaluator: SchemaNameEvaluator,
         schemaEmitter: SchemaEmitter
     ): SpecSchema.SimpleType {
-        return when (val type = schema.getSpecType()) {
+        val effective = schema.effectiveSchema()
+        return when (val type = effective.getSpecType()) {
             SpecSchemaType.Raw -> SpecSchema.AnyComplex
 
             SpecSchemaType.Ref -> SpecSchema.Ref(
-                typeNames = schema.`$ref`.refAsTypeNames()
+                typeNames = effective.`$ref`.refAsTypeNames()
             )
 
             is SpecSchemaType.Primitive -> SpecSchema.Primitive(
@@ -564,15 +610,15 @@ class SpecConverter(
                 items = convertSimpleType(
                     parentTypeNames = parentTypeNames,
                     guessedName = guessedName + "Item",
-                    schema = schema.items,
+                    schema = effective.items,
                     schemaNameEvaluator = schemaNameEvaluator,
                     schemaEmitter = schemaEmitter
                 ),
-                itemsNullable = schema.items.isNullable(null)
+                itemsNullable = effective.items.isNullable(spec, null)
             )
 
             SpecSchemaType.Map -> {
-                val mapItemsSchema = schema.additionalProperties as Schema<*>
+                val mapItemsSchema = effective.additionalProperties as Schema<*>
                 SpecSchema.Map(
                     items = convertSimpleType(
                         parentTypeNames = parentTypeNames,
@@ -581,7 +627,7 @@ class SpecConverter(
                         schemaNameEvaluator = schemaNameEvaluator,
                         schemaEmitter = schemaEmitter
                     ),
-                    itemsNullable = mapItemsSchema.isNullable(null)
+                    itemsNullable = mapItemsSchema.isNullable(spec, null)
                 )
             }
 
@@ -589,9 +635,9 @@ class SpecConverter(
                 val typeNames = schemaNameEvaluator(parentTypeNames + guessedName)
                 val enum = SpecSchema.Enum(
                     typeNames = typeNames,
-                    deprecated = schema.deprecated ?: false,
-                    constants = convertEnumConstants(schema.enum),
-                    description = schema.fullDescription()
+                    deprecated = effective.deprecated ?: false,
+                    constants = convertEnumConstants(effective.enum),
+                    description = effective.fullDescription()
                 )
                 schemaEmitter(enum)
                 SpecSchema.Ref(
@@ -603,7 +649,7 @@ class SpecConverter(
                 val typeNames = schemaNameEvaluator(parentTypeNames + guessedName)
                 val innerObject = convertObject(
                     typeNames = typeNames,
-                    schema = schema
+                    schema = effective
                 )
                 schemaEmitter(innerObject)
                 SpecSchema.Ref(
@@ -615,7 +661,7 @@ class SpecConverter(
                 val typeNames = schemaNameEvaluator(parentTypeNames + guessedName)
                 val innerObject = convertSealed(
                     typeNames = typeNames,
-                    schema = schema
+                    schema = effective
                 )
                 schemaEmitter(innerObject)
                 SpecSchema.Ref(

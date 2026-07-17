@@ -220,7 +220,7 @@ class PoetGenerator(
             ).joinToString("\n\n")
             addKdoc("%L", kdoc)
 
-            val response = convertSimpleType(operation.response.type)
+            val response = convertSimpleType(operation.response.type).nullable(operation.response.nullable)
             val either = PoetTypes.either(response)
             returns(
                 returnType = either,

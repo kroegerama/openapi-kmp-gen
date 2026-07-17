@@ -10,6 +10,8 @@ import io.swagger.v3.oas.models.parameters.Parameter
 import io.swagger.v3.oas.models.parameters.RequestBody
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.servers.Server
+import java.util.Collections
+import java.util.IdentityHashMap
 
 fun Schema<*>.getSpecType(): SpecSchemaType {
     if (`$ref` != null) return SpecSchemaType.Ref
@@ -61,19 +63,131 @@ fun Schema<*>.getSpecType(): SpecSchemaType {
     }
 
     return when {
-        !oneOf.isNullOrEmpty() -> SpecSchemaType.Sealed
-        !anyOf.isNullOrEmpty() -> SpecSchemaType.Object
+        // nullable wrapper with sibling keywords: variant and siblings merge into one object
+        singleNonNullVariant() != null -> SpecSchemaType.Object
+        oneOf.orEmpty().any { !it.isNullType() } -> SpecSchemaType.Sealed
+        anyOf.orEmpty().any { !it.isNullType() } -> SpecSchemaType.Object
         !allOf.isNullOrEmpty() -> SpecSchemaType.Object
         properties.isNullOrEmpty() -> SpecSchemaType.Raw
         else -> SpecSchemaType.Object
     }
 }
 
-fun Schema<*>.isNullable(required: Boolean?): Boolean {
-    if (nullable != null) return nullable
-    if (types != null && "null" in types) return true
+/**
+ * Unwraps composition wrappers that do not describe a type of their own: `oneOf`/`anyOf`
+ * with a single non-`null` variant, and `allOf` with a single `$ref`. Sibling keywords that
+ * shape the type (`properties`, `additionalProperties`, `enum`, other combinators) prevent
+ * unwrapping. Returns the innermost wrapped schema, or this schema if it is not a wrapper.
+ * Nullability of removed `null` variants is not carried over; use [isNullable] to detect it.
+ */
+tailrec fun Schema<*>.effectiveSchema(): Schema<*> {
+    val wrapped = wrappedSchema() ?: return this
+    return wrapped.effectiveSchema()
+}
+
+private fun Schema<*>.wrappedSchema(): Schema<*>? {
+    if (`$ref` != null) return null
+    if (!properties.isNullOrEmpty()) return null
+    if (additionalProperties == true || additionalProperties is Schema<*>) return null
+    if (!enum.isNullOrEmpty()) return null
+    if (listOfNotNull(oneOf, anyOf, allOf).size != 1) return null
+    allOf?.let { members ->
+        return members.singleOrNull()?.takeIf { it.`$ref` != null }
+    }
+    return singleNonNullVariant()
+}
+
+/**
+ * The single `oneOf`/`anyOf` variant remaining after removing `null` type variants,
+ * or `null` if the variants do not have that shape. Sibling keywords are ignored.
+ */
+private fun Schema<*>.singleNonNullVariant(): Schema<*>? {
+    val variants = oneOf ?: anyOf ?: return null
+    val nonNullVariants = variants.filterNot { it.isNullType() }
+    if (nonNullVariants.size == variants.size) return null
+    return nonNullVariants.singleOrNull()
+}
+
+/**
+ * Whether a value described by this schema may be `null`.
+ *
+ * An explicit `nullable` attribute wins. Otherwise the schema is nullable when it declares
+ * a `null` type (`"null"` in the type list or a `null` variant in `oneOf`/`anyOf`), directly
+ * or in a referenced/wrapped schema. If neither applies, a non-[required] value is nullable.
+ */
+fun Schema<*>.isNullable(spec: OpenAPI, required: Boolean?): Boolean {
+    nullable?.let { return it }
+    if (isIntrinsicallyNullable(spec)) return true
     if (required != null) return !required
     return false
+}
+
+private fun Schema<*>.isIntrinsicallyNullable(spec: OpenAPI): Boolean {
+    val visited = Collections.newSetFromMap(IdentityHashMap<Schema<*>, Boolean>())
+    var current: Schema<*> = this
+    while (visited.add(current)) {
+        if (current.nullable == true) return true
+        if (current.types?.contains("null") == true) return true
+        if (current.oneOf.orEmpty().any { it.isNullType() }) return true
+        if (current.anyOf.orEmpty().any { it.isNullType() }) return true
+        current = current.resolveRef(spec)
+            ?: current.effectiveSchema().takeIf { it !== current }
+            ?: return false
+    }
+    return false
+}
+
+fun Schema<*>.isNullType(): Boolean =
+    `$ref` == null && (type == "null" || types?.singleOrNull() == "null")
+
+/**
+ * Fails generation when this schema is a nullable wrapper with sibling keywords whose single
+ * non-null variant is not an object: primitives, enums, arrays and maps cannot be merged into
+ * an object with the sibling properties. Schemas without such a variant pass unchanged.
+ */
+fun Schema<*>.requireMergeableVariant(spec: OpenAPI, name: () -> String) {
+    val variant = singleNonNullVariant() ?: return
+    val visited: MutableSet<Schema<*>> = Collections.newSetFromMap(IdentityHashMap())
+    var terminal = variant.effectiveSchema()
+    while (terminal.`$ref` != null && visited.add(terminal)) {
+        terminal = (terminal.resolveRef(spec) ?: break).effectiveSchema()
+    }
+    when (terminal.getSpecType()) {
+        is SpecSchemaType.Primitive,
+        SpecSchemaType.Enum,
+        SpecSchemaType.Array,
+        SpecSchemaType.Map -> throw IllegalStateException(
+            "cannot generate '${name()}': the schema combines a nullable oneOf/anyOf wrapper with sibling keywords, " +
+                    "but the remaining variant is not an object and cannot be merged into one"
+        )
+
+        else -> Unit
+    }
+}
+
+/**
+ * Collects the effective `required` property names, following the same structure as
+ * [resolveProperties]: `$ref` targets, `allOf` members and the single non-null variant of
+ * a nullable wrapper. General `anyOf` members are excluded: only one of them has to match,
+ * so their `required` lists must not constrain the merged object.
+ */
+fun Schema<*>.resolveRequired(spec: OpenAPI): Set<String> {
+    val collected = mutableSetOf<String>()
+    val visited: MutableSet<Schema<*>> = Collections.newSetFromMap(IdentityHashMap())
+
+    fun Schema<*>.inner() {
+        if (!visited.add(this)) return
+        resolveRef(spec)?.let {
+            it.inner()
+            return
+        }
+        singleNonNullVariant()?.inner()
+        allOf?.forEach { it.inner() }
+        required?.let { collected += it }
+    }
+
+    inner()
+    return collected
 }
 
 fun Schema<*>.fullDescription() = listOfNotNull(
@@ -143,23 +257,21 @@ fun Schema<*>.resolveProperties(
             it.inner(localIgnoreProperties)
             return
         }
-        if (anyOf != null) {
-            anyOf.forEach { child ->
-                child.inner(localIgnoreProperties)
-            }
-            return
+        singleNonNullVariant()?.inner(localIgnoreProperties)
+        anyOf?.forEach { child ->
+            child.inner(localIgnoreProperties)
         }
-        if (allOf != null) {
-            allOf.forEach { child ->
-                child.inner(localIgnoreProperties)
-            }
-            return
+        allOf?.forEach { child ->
+            child.inner(localIgnoreProperties)
         }
 
         properties?.filter { (propertyName, _) ->
             propertyName !in localIgnoreProperties
-        }?.let {
-            collectedProperties += it
+        }?.forEach { (propertyName, propertySchema) ->
+            // a redeclaration without type information only annotates the inherited property
+            if (propertyName !in collectedProperties || propertySchema.definesType()) {
+                collectedProperties[propertyName] = propertySchema
+            }
         }
     }
 
@@ -167,6 +279,18 @@ fun Schema<*>.resolveProperties(
 
     return collectedProperties
 }
+
+private fun Schema<*>.definesType(): Boolean =
+    `$ref` != null ||
+            type != null ||
+            !types.isNullOrEmpty() ||
+            !enum.isNullOrEmpty() ||
+            items != null ||
+            !properties.isNullOrEmpty() ||
+            additionalProperties != null ||
+            oneOf != null ||
+            anyOf != null ||
+            allOf != null
 
 private fun Schema<*>.resolveType(): String {
     if (type != null) return type
