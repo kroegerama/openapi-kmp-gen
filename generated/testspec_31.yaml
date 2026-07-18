@@ -466,6 +466,12 @@ components:
         base64:
           type: string
           format: byte
+        epochSeconds:
+          type: integer
+          format: epoch-seconds
+        epochMillis:
+          type: integer
+          format: epoch-millis
     IntegerTest:
       type: object
       properties:

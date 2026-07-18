@@ -14,6 +14,8 @@ package com.kroegerama.kmp.gen.generated30.models
 
 import androidx.compose.runtime.Immutable
 import com.kroegerama.openapi.kmp.gen.`companion`.SerializableBase64
+import com.kroegerama.openapi.kmp.gen.`companion`.SerializableEpochMilliseconds
+import com.kroegerama.openapi.kmp.gen.`companion`.SerializableEpochSeconds
 import com.kroegerama.openapi.kmp.gen.`companion`.SerializableISO8601Instant
 import kotlin.Double
 import kotlin.Float
@@ -106,6 +108,10 @@ public data class SerialTest(
   public val uuid: Uuid? = null,
   @SerialName("base64")
   public val base64: SerializableBase64? = null,
+  @SerialName("epochSeconds")
+  public val epochSeconds: SerializableEpochSeconds? = null,
+  @SerialName("epochMillis")
+  public val epochMillis: SerializableEpochMilliseconds? = null,
 )
 
 @Serializable
