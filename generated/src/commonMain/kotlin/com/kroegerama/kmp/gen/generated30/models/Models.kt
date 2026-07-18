@@ -210,6 +210,105 @@ public data class SealedClass2Child2(
   public val child2Only: String? = null,
 ) : SealedClass2
 
+/**
+ * anyOf without discriminator -> object with merged properties
+ */
+@Serializable
+@Immutable
+public data class CombinedAnyOf(
+  @SerialName("albumId")
+  public val albumId: Int? = null,
+  @SerialName("id")
+  public val id: Int? = null,
+  @SerialName("title")
+  public val title: String? = null,
+  @SerialName("url")
+  public val url: String? = null,
+  @SerialName("thumbnailUrl")
+  public val thumbnailUrl: String? = null,
+  @SerialName("combinedExtraAttr")
+  public val combinedExtraAttr: String? = null,
+)
+
+/**
+ * single allOf with sibling properties -> object with merged properties
+ */
+@Serializable
+@Immutable
+public data class ExtendedPhoto(
+  @SerialName("albumId")
+  public val albumId: Int? = null,
+  @SerialName("id")
+  public val id: Int? = null,
+  @SerialName("title")
+  public val title: String? = null,
+  @SerialName("url")
+  public val url: String? = null,
+  @SerialName("thumbnailUrl")
+  public val thumbnailUrl: String? = null,
+  @SerialName("extendedAttr")
+  public val extendedAttr: String? = null,
+)
+
+@Serializable
+@Immutable
+@JsonClassDiscriminator("kind")
+public sealed interface ActionResponse
+
+@Serializable
+@Immutable
+@SerialName("create")
+public data class CreateActionResponse(
+  @SerialName("itemId")
+  public val itemId: String,
+) : ActionResponse
+
+@Serializable
+@Immutable
+@SerialName("update")
+public data class UpdateActionResponse(
+  @SerialName("oldItemId")
+  public val oldItemId: String,
+  @SerialName("newItemId")
+  public val newItemId: String,
+) : ActionResponse
+
+@Serializable
+@Immutable
+@SerialName("delete")
+public data class DeleteActionResponse(
+  @SerialName("itemId")
+  public val itemId: String,
+) : ActionResponse
+
+@Serializable
+@Immutable
+@SerialName("create")
+public data class CreateEventNotification(
+  @SerialName("eventId")
+  public val eventId: String,
+) : EventNotification
+
+@Serializable
+@Immutable
+@SerialName("delete")
+public data class DeleteEventNotification(
+  @SerialName("eventId")
+  public val eventId: String,
+) : EventNotification
+
+@Serializable
+@Immutable
+@JsonClassDiscriminator("kind")
+public sealed interface EventNotification
+
+@Serializable
+@Immutable
+public data class AuditedAction(
+  @SerialName("auditId")
+  public val auditId: String,
+)
+
 public typealias DateTime = SerializableISO8601Instant
 
 /**

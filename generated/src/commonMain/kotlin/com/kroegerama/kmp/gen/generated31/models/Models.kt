@@ -408,6 +408,72 @@ public data class SealedClass2Child2(
 
 @Serializable
 @Immutable
+@JsonClassDiscriminator("kind")
+public sealed interface ActionResponse
+
+@Serializable
+@Immutable
+@SerialName("create")
+public data class CreateActionResponse(
+  @SerialName("itemId")
+  public val itemId: String,
+) : ActionResponse
+
+@Serializable
+@Immutable
+@SerialName("update")
+public data class UpdateActionResponse(
+  @SerialName("oldItemId")
+  public val oldItemId: String,
+  @SerialName("newItemId")
+  public val newItemId: String,
+) : ActionResponse
+
+@Serializable
+@Immutable
+@SerialName("delete")
+public data class DeleteActionResponse(
+  @SerialName("itemId")
+  public val itemId: String,
+) : ActionResponse
+
+@Serializable
+@Immutable
+@SerialName("create")
+public data class CreateEventNotification(
+  @SerialName("eventId")
+  public val eventId: String,
+) : EventNotification,
+    NullableEventNotification
+
+@Serializable
+@Immutable
+@SerialName("delete")
+public data class DeleteEventNotification(
+  @SerialName("eventId")
+  public val eventId: String,
+) : EventNotification,
+    NullableEventNotification
+
+@Serializable
+@Immutable
+@JsonClassDiscriminator("kind")
+public sealed interface EventNotification
+
+@Serializable
+@Immutable
+public data class AuditedAction(
+  @SerialName("auditId")
+  public val auditId: String,
+)
+
+@Serializable
+@Immutable
+@JsonClassDiscriminator("kind")
+public sealed interface NullableEventNotification
+
+@Serializable
+@Immutable
 public data class NullableResponse200Response(
   @SerialName("payload")
   public val payload: String? = null,

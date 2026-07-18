@@ -587,3 +587,107 @@ components:
           type: string
         child2Only:
           type: string
+    ActionResponse:
+      type: object
+      required:
+        - kind
+      anyOf:
+        - $ref: '#/components/schemas/CreateActionResponse'
+        - $ref: '#/components/schemas/UpdateActionResponse'
+        - $ref: '#/components/schemas/DeleteActionResponse'
+      discriminator:
+        propertyName: kind
+        mapping:
+          create: '#/components/schemas/CreateActionResponse'
+          update: '#/components/schemas/UpdateActionResponse'
+          delete: '#/components/schemas/DeleteActionResponse'
+    CreateActionResponse:
+      required:
+        - kind
+        - itemId
+      properties:
+        kind:
+          enum:
+            - create
+          type: string
+        itemId:
+          type: string
+    UpdateActionResponse:
+      required:
+        - kind
+        - oldItemId
+        - newItemId
+      properties:
+        kind:
+          enum:
+            - update
+          type: string
+        oldItemId:
+          type: string
+        newItemId:
+          type: string
+    DeleteActionResponse:
+      required:
+        - kind
+        - itemId
+      properties:
+        kind:
+          enum:
+            - delete
+          type: string
+        itemId:
+          type: string
+    # variants of EventNotification, deliberately declared before their sealed wrapper:
+    # the discriminator property must be stripped regardless of declaration order
+    CreateEventNotification:
+      required:
+        - kind
+        - eventId
+      properties:
+        kind:
+          enum:
+            - create
+          type: string
+        eventId:
+          type: string
+    DeleteEventNotification:
+      required:
+        - kind
+        - eventId
+      properties:
+        kind:
+          enum:
+            - delete
+          type: string
+        eventId:
+          type: string
+    EventNotification:
+      anyOf:
+        - $ref: '#/components/schemas/CreateEventNotification'
+        - $ref: '#/components/schemas/DeleteEventNotification'
+      discriminator:
+        propertyName: kind
+        mapping:
+          create: '#/components/schemas/CreateEventNotification'
+          delete: '#/components/schemas/DeleteEventNotification'
+    # allOf ref to a discriminated anyOf: must not absorb the variant properties
+    AuditedAction:
+      required:
+        - auditId
+      allOf:
+        - $ref: '#/components/schemas/ActionResponse'
+      properties:
+        auditId:
+          type: string
+    # degenerate null-only oneOf next to a discriminated anyOf: the anyOf variants win
+    NullableEventNotification:
+      oneOf:
+        - type: 'null'
+      anyOf:
+        - $ref: '#/components/schemas/CreateEventNotification'
+        - $ref: '#/components/schemas/DeleteEventNotification'
+      discriminator:
+        propertyName: kind
+        mapping:
+          create: '#/components/schemas/CreateEventNotification'
+          delete: '#/components/schemas/DeleteEventNotification'
