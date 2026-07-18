@@ -36,6 +36,8 @@ class SpecConverter(
     fun convert(
         createdAt: OffsetDateTime
     ): SpecModel {
+        registerSealedDiscriminatorProperties()
+
         val info = spec.info
 
         val fileHeader = with(info) {
@@ -74,6 +76,23 @@ class SpecConverter(
             modelInterfaces = modelInterfaces,
             securitySchemes = convertSecuritySchemes()
         )
+    }
+
+    /**
+     * Registers each discriminated sealed schema's discriminator property as an ignored property
+     * of its `$ref` variants. Must run before schema conversion: [convertObject] consumes
+     * [ignoredProperties] in spec declaration order, so a variant declared before its sealed
+     * wrapper would otherwise keep an explicit discriminator property that collides with the
+     * inherited `@JsonClassDiscriminator` at runtime.
+     */
+    private fun registerSealedDiscriminatorProperties() {
+        SpecVisitor(spec, options).visit(allComponentSchemas = true) { schema ->
+            val discriminatorProperty = schema.discriminator?.propertyName ?: return@visit
+            schema.sealedVariants()?.forEach { variant ->
+                val ref = variant.effectiveSchema().`$ref` ?: return@forEach
+                ignoredProperties.getOrPut(ref.refAsTypeNames(), ::mutableSetOf) += discriminatorProperty
+            }
+        }
     }
 
     private fun convertMetadata(
@@ -502,7 +521,7 @@ class SpecConverter(
         val discriminator: Discriminator? = schema.discriminator
         val children = mutableListOf<SpecSchema.NamedSpecSchema>()
 
-        val types: List<SpecSchema.Ref> = schema.oneOf.filterNot { it.isNullType() }.mapIndexed { index, rawItem ->
+        val types: List<SpecSchema.Ref> = schema.sealedVariants().orEmpty().mapIndexed { index, rawItem ->
             val item = rawItem.effectiveSchema()
             if (item.`$ref` != null) {
                 val mappedName = discriminator?.mapping.orEmpty().entries.firstOrNull { (name, ref) ->

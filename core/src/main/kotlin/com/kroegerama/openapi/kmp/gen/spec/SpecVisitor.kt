@@ -17,7 +17,13 @@ class SpecVisitor(
     private val options: OptionSet
 ) {
 
+    /**
+     * Visits every schema reachable from the paths. Component schemas are visited when
+     * [allComponentSchemas] is set, when they are force-created, or when the
+     * `generateAllNamedSchemas` option is enabled.
+     */
     fun visit(
+        allComponentSchemas: Boolean = false,
         visitor: (schema: Schema<*>) -> Unit
     ) {
         val visited = IdentityHashMap<Any, Any>()
@@ -31,7 +37,7 @@ class SpecVisitor(
         }
         openAPI.components?.schemas?.forEach { (_, schema) ->
                 val forceCreate = schema.extensions?.get(Constants.EXT_FORCE_CREATE) as? Boolean == true
-                if (forceCreate || options.generateAllNamedSchemas) {
+                if (allComponentSchemas || forceCreate || options.generateAllNamedSchemas) {
                     visitSchema(
                         visFun = { obj -> visited.put(obj, marker) == null },
                         schema = schema,

@@ -65,12 +65,24 @@ fun Schema<*>.getSpecType(): SpecSchemaType {
     return when {
         // nullable wrapper with sibling keywords: variant and siblings merge into one object
         singleNonNullVariant() != null -> SpecSchemaType.Object
-        oneOf.orEmpty().any { !it.isNullType() } -> SpecSchemaType.Sealed
+        sealedVariants() != null -> SpecSchemaType.Sealed
         anyOf.orEmpty().any { !it.isNullType() } -> SpecSchemaType.Object
         !allOf.isNullOrEmpty() -> SpecSchemaType.Object
         properties.isNullOrEmpty() -> SpecSchemaType.Raw
         else -> SpecSchemaType.Object
     }
+}
+
+/**
+ * The variants that form a sealed type: the non-`null`-type `oneOf` variants, or — when a
+ * discriminator is present — the non-`null`-type `anyOf` variants. A discriminated `anyOf`
+ * selects exactly one variant, so it maps to a sealed type like `oneOf`. Returns `null` when
+ * the schema does not describe a sealed type.
+ */
+fun Schema<*>.sealedVariants(): List<Schema<*>>? {
+    oneOf?.filterNot { it.isNullType() }?.takeIf { it.isNotEmpty() }?.let { return it }
+    if (discriminator == null) return null
+    return anyOf?.filterNot { it.isNullType() }?.takeIf { it.isNotEmpty() }
 }
 
 /**
@@ -258,8 +270,9 @@ fun Schema<*>.resolveProperties(
             return
         }
         singleNonNullVariant()?.inner(localIgnoreProperties)
-        anyOf?.forEach { child ->
-            child.inner(localIgnoreProperties)
+        // sealed variants describe alternative types, not properties of a merged object
+        if (sealedVariants() == null) {
+            anyOf?.forEach { child -> child.inner(localIgnoreProperties) }
         }
         allOf?.forEach { child ->
             child.inner(localIgnoreProperties)
