@@ -42,6 +42,9 @@ kotlin {
         jvmMain.dependencies {
             implementation(libs.logback.classic)
         }
+        jvmTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
     }
 }
 
