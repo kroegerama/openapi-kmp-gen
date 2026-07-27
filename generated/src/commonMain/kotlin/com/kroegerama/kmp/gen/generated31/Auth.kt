@@ -80,4 +80,28 @@ public sealed interface Auth {
       public const val ID: String = "BearerAuth"
     }
   }
+
+  public data class OAuth(
+    public val getBearer: suspend () -> AuthItem.Bearer?,
+  ) : Auth {
+    override val key: String = ID
+
+    override suspend fun provideAuthItem(): AuthItem? = getBearer()
+
+    public companion object {
+      public const val ID: String = "OAuth"
+    }
+  }
+
+  public data class OIDCAuth(
+    public val getBearer: suspend () -> AuthItem.Bearer?,
+  ) : Auth {
+    override val key: String = ID
+
+    override suspend fun provideAuthItem(): AuthItem? = getBearer()
+
+    public companion object {
+      public const val ID: String = "OIDCAuth"
+    }
+  }
 }

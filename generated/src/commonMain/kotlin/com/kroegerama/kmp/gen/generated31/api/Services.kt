@@ -269,6 +269,8 @@ public object DefaultApi {
       Auth.BearerAuth.ID,
       Auth.TokenAuth.ID,
       Auth.APIKeyAuth.ID,
+      Auth.OAuth.ID,
+      Auth.OIDCAuth.ID,
     )
     url.takeFrom("https://example.com/")
     url.appendPathSegments(

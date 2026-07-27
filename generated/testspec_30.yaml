@@ -175,6 +175,8 @@ paths:
         - BearerAuth: [ ]
         - TokenAuth: [ ]
         - APIKeyAuth: [ ]
+        - OAuth: [ ]
+        - OIDCAuth: [ ]
       requestBody:
         content:
           application/x-www-form-urlencoded:
@@ -199,6 +201,18 @@ components:
     BearerAuth:
       type: http
       scheme: bearer
+    OAuth:
+      type: oauth2
+      flows:
+        password:
+          tokenUrl: https://auth.example.com/realms/test/protocol/openid-connect/token
+          scopes: { }
+        clientCredentials:
+          tokenUrl: https://auth.example.com/realms/test/protocol/openid-connect/token
+          scopes: { }
+    OIDCAuth:
+      type: openIdConnect
+      openIdConnectUrl: https://auth.example.com/realms/test/.well-known/openid-configuration
   parameters:
     TestParam:
       name: testParam
