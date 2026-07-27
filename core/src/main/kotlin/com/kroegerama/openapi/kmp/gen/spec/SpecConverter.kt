@@ -127,9 +127,10 @@ class SpecConverter(
                     else -> return@mapNotNull null
                 }
 
-                null,
                 SecurityScheme.Type.OAUTH2,
-                SecurityScheme.Type.OPENIDCONNECT,
+                SecurityScheme.Type.OPENIDCONNECT -> SpecSecurityScheme.Type.Bearer
+
+                null,
                 SecurityScheme.Type.MUTUALTLS -> return@mapNotNull null // not supported yet
             }
 
