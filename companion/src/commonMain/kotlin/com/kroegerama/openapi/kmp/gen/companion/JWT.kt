@@ -21,6 +21,7 @@ import kotlin.io.encoding.Base64
 import kotlin.math.floor
 import kotlin.math.roundToLong
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Instant
 
 /**
@@ -62,27 +63,40 @@ public class JWT private constructor(
     public fun getClaim(name: String): JsonElement? = claims[name]
 
     /**
-     * checks only exp (expiresAt)
+     * Checks only exp ([expiresAt]).
+     *
+     * The leeway is a clock-skew grace period: the token still counts as valid until
+     * [leeway] *after* its expiry.
+     *
+     * @param leeway grace period, added to exp
+     * @throws IllegalArgumentException when [leeway] is negative.
      */
-    public fun isExpired(leeway: Long = 0L): Boolean {
-        require(leeway >= 0) { "The leeway must be a positive value. Got $leeway instead." }
+    public fun isExpired(leeway: Duration = Duration.ZERO): Boolean {
+        require(leeway >= Duration.ZERO) { "The leeway must not be negative. Got $leeway instead." }
 
-        val now = Clock.System.now().epochSeconds
-        val exp = expiresAt?.epochSeconds
+        val now = Clock.System.now()
+        val exp = expiresAt
 
         return exp != null && now > exp + leeway
     }
 
     /**
-     * checks all time related fields: exp (expiresAt), nbf (notBefore), and iat (issuedAt)
+     * Checks all time related fields: exp ([expiresAt]), nbf ([notBefore]), and iat ([issuedAt]).
+     *
+     * The leeway is a clock-skew grace period that widens the acceptance window in every
+     * direction: exp is extended by [leeway], nbf is accepted up to [leeway] early,
+     * and an iat up to [leeway] in the future is tolerated.
+     *
+     * @param leeway grace period
+     * @throws IllegalArgumentException when [leeway] is negative.
      */
-    public fun isTimeValid(leeway: Long = 0L): Boolean {
-        require(leeway >= 0) { "The leeway must be a positive value. Got $leeway instead." }
+    public fun isTimeValid(leeway: Duration = Duration.ZERO): Boolean {
+        require(leeway >= Duration.ZERO) { "The leeway must not be negative. Got $leeway instead." }
 
-        val now = Clock.System.now().epochSeconds
-        val exp = expiresAt?.epochSeconds
-        val nbf = notBefore?.epochSeconds
-        val iat = issuedAt?.epochSeconds
+        val now = Clock.System.now()
+        val exp = expiresAt
+        val nbf = notBefore
+        val iat = issuedAt
 
         if (exp != null && now > exp + leeway) return false
         if (nbf != null && now < nbf - leeway) return false
@@ -91,6 +105,10 @@ public class JWT private constructor(
         return true
     }
 
+    /**
+     * Returns the raw [token], so a [JWT] interpolates directly into a header value.
+     * Do not log the result — it is the complete, usable token.
+     */
     override fun toString(): String = token
 
     public fun toHumanReadableString(): String {

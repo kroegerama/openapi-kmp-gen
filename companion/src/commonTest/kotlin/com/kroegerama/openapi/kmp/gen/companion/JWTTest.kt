@@ -12,6 +12,8 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock.System
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 class JWTTest {
@@ -202,8 +204,8 @@ class JWTTest {
         )
 
         val jwt = JWT.parse(token)
-        assertTrue(jwt.isExpired(leeway = 0))
-        assertTrue(!jwt.isExpired(leeway = 10))
+        assertTrue(jwt.isExpired(leeway = Duration.ZERO))
+        assertTrue(!jwt.isExpired(leeway = 10.seconds))
     }
 
     @Test
@@ -281,8 +283,8 @@ class JWTTest {
         val token = createToken("""{"alg":"HS256"}""", """{"exp":1000000000}""")
         val jwt = JWT.parse(token)
 
-        assertFailsWith<IllegalArgumentException> { jwt.isExpired(leeway = -1) }
-        assertFailsWith<IllegalArgumentException> { jwt.isTimeValid(leeway = -1) }
+        assertFailsWith<IllegalArgumentException> { jwt.isExpired(leeway = (-1).seconds) }
+        assertFailsWith<IllegalArgumentException> { jwt.isTimeValid(leeway = (-1).seconds) }
     }
 
     @Test
