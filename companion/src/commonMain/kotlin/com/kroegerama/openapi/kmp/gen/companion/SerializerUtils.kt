@@ -38,7 +38,7 @@ internal fun serializeInner(inner: JsonElement): String? = when (inner) {
 }
 
 /**
- * Serializes [element] using OpenAPI **simple** style — the default for `path` and `header`
+ * Serializes [element] using OpenAPI **simple** style - the default for `path` and `header`
  * parameters. Primitives and arrays are unaffected by [explode] in this style (arrays are always
  * comma-joined); objects honor it: `k1=v1,k2=v2` when exploded, otherwise `k1,v1,k2,v2`.
  * Returns `null` for [JsonNull] so callers can skip the parameter entirely.
@@ -56,8 +56,8 @@ internal fun serializeSimple(element: JsonElement, explode: Boolean): String? = 
 }
 
 /**
- * Serializes [element] using OpenAPI **form** style — the default for `query` and `cookie`
- * parameters — invoking [emit] once per resulting name/value pair (`value` is `null` for a
+ * Serializes [element] using OpenAPI **form** style - the default for `query` and `cookie`
+ * parameters - invoking [emit] once per resulting name/value pair (`value` is `null` for a
  * [JsonNull] element, which callers should skip). Behavior by [explode]:
  * - primitive → a single `name`/value pair
  * - array, explode → one pair per item under [name]; non-explode → one comma-joined pair

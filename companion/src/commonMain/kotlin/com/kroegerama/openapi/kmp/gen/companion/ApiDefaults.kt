@@ -42,7 +42,7 @@ public val defaultSensitiveHeaders: Set<String> = setOf(
  * @param withCookies installs [HttpCookies] cookie handling.
  * @param withContentEncoding installs gzip/deflate [ContentEncoding].
  * @param withLogging installs [Logging], redacting the values of [sanitizeHeaders] (case-insensitive).
- * @param sanitizeHeaders header names to redact from logs — e.g. the name of a custom
+ * @param sanitizeHeaders header names to redact from logs - e.g. the name of a custom
  *   API-key header. **Only headers can be redacted:** a secret carried in a query parameter (an
  *   [AuthItem.ApiKey] in [AuthItem.Position.Query]) is logged verbatim as part of the request URL,
  *   because Ktor's [Logging] plugin has no query-redaction hook. Prefer header or cookie position

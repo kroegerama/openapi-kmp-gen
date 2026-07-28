@@ -107,7 +107,7 @@ public class JWT private constructor(
 
     /**
      * Returns the raw [token], so a [JWT] interpolates directly into a header value.
-     * Do not log the result — it is the complete, usable token.
+     * Do not log the result - it is the complete, usable token.
      */
     override fun toString(): String = token
 

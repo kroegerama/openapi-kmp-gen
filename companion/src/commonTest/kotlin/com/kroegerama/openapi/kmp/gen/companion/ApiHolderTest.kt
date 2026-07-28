@@ -190,7 +190,7 @@ class ApiHolderTest {
         }
         assertEquals(Dto(1), lenient.client.get("x").body())
 
-        // a strict Json must reject the extra field — proving ContentNegotiation is wired to the
+        // a strict Json must reject the extra field - proving ContentNegotiation is wired to the
         // holder's json instance rather than a default of its own
         val strict = TestApiHolder().apply {
             updateClient(json = Json { ignoreUnknownKeys = false }, userAgent = null, createHttpClient = factory)
