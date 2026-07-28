@@ -12,16 +12,16 @@ compose = "1.11.4"
 collections-immutable = "0.5.1"
 datetime = "0.8.0"
 desugar = "2.1.5"
-shadow = "9.6.0"
+robolectric = "4.16.1"
+shadow = "9.6.1"
 airline = "0.9"
 guava = "33.6.0-jre"
 kotlinpoet = "2.3.0"
 swagger-parser = "2.1.45"
 gradle-publish = "2.1.1"
-versions = "0.54.0"
 slf4f = "2.0.18"
 logback-android = "3.0.0"
-logback-classic = "1.5.38"
+logback-classic = "1.6.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -45,6 +45,7 @@ ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "k
 arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
 compose-runtime-annotation = { module = "androidx.compose.runtime:runtime-annotation", version.ref = "compose" }
 desugar = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 airline = { module = "io.airlift:airline", version.ref = "airline" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
@@ -63,4 +64,3 @@ kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", versio
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
 vanniktech-mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktechMavenPublish" }
 gradle-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-publish" }
-versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
