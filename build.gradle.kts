@@ -1,4 +1,3 @@
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
 
 plugins {
@@ -8,7 +7,6 @@ plugins {
     alias(libs.plugins.kotlinSerialization) apply false
     alias(libs.plugins.shadow) apply false
     alias(libs.plugins.vanniktech.mavenPublish) apply false
-    alias(libs.plugins.versions)
 }
 
 allprojects {
@@ -27,17 +25,4 @@ allprojects {
             pom(pomAction)
         }
     }
-}
-
-tasks.withType<DependencyUpdatesTask>().configureEach {
-    gradleReleaseChannel = "current"
-    rejectVersionIf {
-        isNonStable(candidate.version) && !isNonStable(currentVersion)
-    }
-}
-
-private val nonStableQualifiers = listOf("alpha", "beta", "rc")
-
-private fun isNonStable(version: String): Boolean = nonStableQualifiers.any { qualifier ->
-    qualifier in version.lowercase()
 }
