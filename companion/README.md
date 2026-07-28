@@ -16,7 +16,15 @@ com.kroegerama.openapi.kmp.gen.companion
 ├── Serializers.kt            # KSerializer implementations (Base64, epoch, ISO 8601, ImmutableList)
 ├── SerializerUtils.kt        # Parameter serialization helpers (path, query, header, cookie)
 ├── FormDataContent.kt        # Helpers to convert @Serializable objects to form data
-└── JWT.kt                    # JWT parser (no signature validation)
+├── JWT.kt                    # JWT parser (no signature validation)
+└── keycloak/
+    ├── Keycloak.kt               # Keycloak client: login, auto-refresh, logout, discovery, auth-code flow
+    ├── KeycloakAuthorization.kt  # Authorization Code + PKCE request building and redirect parsing
+    ├── KeycloakEndpoints.kt      # Realm URL convention + OpenID Connect discovery model
+    ├── KeycloakTokens.kt         # Serializable token set with expiry checks
+    ├── Pkce.kt                   # PKCE (RFC 7636) S256 verifier/challenge pair
+    ├── Sha256.kt                 # internal pure-Kotlin SHA-256 (PKCE only)
+    └── KeycloakWebViewClient.kt  # androidMain only: WebViewClient that intercepts the auth-code redirect
 ```
 
 ## Platform Source Sets
@@ -25,7 +33,7 @@ com.kroegerama.openapi.kmp.gen.companion
 |---------------|------------|------------------------------------|
 | `androidMain` | OkHttp     | OkHttp version + Android API level |
 | `jvmMain`     | OkHttp     | OkHttp version + OS name/version   |
-| `appleMain`   | Darwin     | —                                  |
+| `appleMain`   | Darwin     | -                                  |
 | `iosMain`     | (inherits) | UIDevice system name/version       |
 | `macosMain`   | (inherits) | NSProcessInfo OS version           |
 | `linuxMain`   | Curl       | uname sysname/release              |
@@ -37,11 +45,11 @@ com.kroegerama.openapi.kmp.gen.companion
 
 Abstract base class that generated API objects extend (e.g. `object Api : ApiHolder()`). Manages:
 
-- `baseUrl` — server URL, overridable at runtime
-- `json` — kotlinx.serialization `Json` instance (defaults to `createDefaultJson()`)
-- `client` — Ktor `HttpClient`, created lazily on first access and reconfigurable via `updateClient()` (cookies, compression, logging with header
+- `baseUrl` - server URL, overridable at runtime
+- `json` - kotlinx.serialization `Json` instance (defaults to `createDefaultJson()`)
+- `client` - Ktor `HttpClient`, created lazily on first access and reconfigurable via `updateClient()` (cookies, compression, logging with header
   sanitizing, custom decorator); the previous client is closed on replacement
-- Auth provider registration via `setAuthProvider(id, provider)` / `clearAuthProvider(id)` — thread-safe (copy-on-write map behind an
+- Auth provider registration via `setAuthProvider(id, provider)` / `clearAuthProvider(id)` - thread-safe (copy-on-write map behind an
   `AtomicReference`), providers registered after client creation are picked up by subsequent requests
 
 ### `AuthPlugin`
@@ -53,7 +61,7 @@ Supported auth types (`AuthItem`):
 
 - `Basic(username, password)`
 - `Bearer(token)`
-- `ApiKey(position, name, value)` — position: `Header`, `Query`, or `Cookie`
+- `ApiKey(position, name, value)` - position: `Header`, `Query`, or `Cookie`
 
 ### `CallResponse` / `Request`
 
@@ -92,8 +100,8 @@ Parameter serialization helpers for generated service methods:
 
 Extension functions to convert any `@Serializable` object to:
 
-- `asFormDataContent()` — URL-encoded form data
-- `asMultiPartFormDataContent()` — multipart form data
+- `asFormDataContent()` - URL-encoded form data
+- `asMultiPartFormDataContent()` - multipart form data
 
 ### `JWT`
 
@@ -103,6 +111,93 @@ Parses JWT tokens to extract header, payload, and claims. Does **not** validate 
 - Standard claims: `issuer`, `subject`, `audience`, `expiresAt`, `notBefore`, `issuedAt`, `id`
 - Custom claims: `getClaim(name)`
 - Time checks: `isExpired(leeway)`, `isTimeValid(leeway)`
+
+### `Keycloak`
+
+Self-contained Keycloak / OpenID Connect client (`keycloak` subpackage) that obtains, stores, and refreshes OAuth 2.0 tokens. Uses its own lightweight
+`HttpClient` (`createKeycloakHttpClient()`, with conservative timeouts so a hung token request cannot stall API calls), never the `ApiHolder` client,
+so token requests bypass the API's auth plugin.
+
+- Grants: `login(username, password)` (Direct Access Grants), `loginClientCredentials()`, and the Authorization Code + PKCE flow (see below); all
+  accept optional scopes and extra parameters (e.g. `append("totp", otp)`)
+- Endpoints: `KeycloakEndpoints.fromRealm(baseUrl, realm)` builds Keycloak's standard URL layout; `Keycloak.discover(...)` resolves them from
+  `.well-known/openid-configuration` instead
+- `bearerOrNull()` returns the current access token as `AuthItem.Bearer`, refreshing it first when expired (configurable leeway, single-flight behind
+  a `Mutex`); `asBearerProvider()` adapts it to a generated bearer `Auth` variant. Client-credentials sessions (usually issued without a refresh
+  token) are renewed by repeating the `client_credentials` request instead
+- Refresh failure semantics: HTTP 400/401 with a Keycloak error body of `invalid_grant` clears the token state (a new login is required;
+  client-credentials sessions relogin instead); any other failure - transient errors, a 400/401 without a readable Keycloak error body (reverse
+  proxies, gateways, VPN portals), but also e.g. `invalid_client` - keeps the tokens so a later call can retry
+- State: observable via `tokens: StateFlow<KeycloakTokens?>` and `isLoggedIn: Flow<Boolean>`; the latter runs the token loader before its first
+  emission, so it reflects persisted tokens at startup while `tokens` stays `null` until the loader has run. Persistence is delegated to the app via
+  `KeycloakTokenLoader` (runs lazily on first access; a throwing loader is retried on the next access until an explicit login/logout/`updateTokens`
+  makes the in-memory state authoritative) and `KeycloakTokenListener` (called on every change, `null` on logout) -
+  `KeycloakTokens` is `@Serializable` for exactly this purpose. Both callbacks run while the client's internal lock is held and must not call back
+  into the `Keycloak` instance
+- Session end is signaled via `sessionEnded: SharedFlow<KeycloakSessionEndReason>`, emitted only when a session actually existed:
+  `SessionExpired` (refresh token rejected or expired - drive a "you were logged out" notification) vs `Logout` (explicit `logout()` or
+  `updateTokens(null)`); events are not replayed, so collect it for the lifetime of the UI
+- `logout()` clears local state (always) and best-effort notifies Keycloak's end-session endpoint using the refresh token
+- Errors use the module's `Either<CallException, T>` model; `CallException.keycloakErrorOrNull()` extracts the Keycloak error body
+
+```kotlin
+val keycloak = Keycloak(
+    baseUrl = Url("https://auth.example.com"),
+    realm = "my-realm",
+    clientId = "my-app",
+    tokenLoader = { storage.loadTokens() },
+    tokenListener = { storage.saveTokens(it) },
+)
+
+keycloak.login("alice", "password")
+
+// OpenAPI oauth2/openIdConnect security schemes generate bearer Auth variants:
+Api.setAuthProvider(Auth.OIDCAuth(keycloak.asBearerProvider()))
+```
+
+#### Authorization Code + PKCE
+
+For browser-based login (SSO, social logins, WebAuthn, required actions), the package provides all protocol-level pieces; presenting the browser and
+capturing the redirect is the application's responsibility:
+
+```kotlin
+val request = keycloak.createAuthorizationRequest(redirectUri = "myapp://callback")
+// 1. open request.url in a browser (see recipes below)
+// 2. capture the redirect and hand it back:
+val result = keycloak.handleAuthorizationRedirect(request, capturedRedirectUrl)
+// tokens are stored; refresh/persistence/asBearerProvider() work as usual
+```
+
+- `createAuthorizationRequest` builds the full authorization URL with `S256` PKCE and a random `state`
+  (`Pkce.generate()` draws 256 bits from the platform CSPRNG; on the JVM, entropy gathering suspends instead of blocking); a `decorator` adds extra
+  query parameters
+- `AuthorizationRequest.parseRedirect` validates `state` **before** trusting `error`/`code` and surfaces
+  `KeycloakAuthorizationException` (`AuthorizationError` such as `access_denied`, `StateMismatch`, `MissingCode`);
+  `exchangeAuthorizationCode` is available separately when the one-shot `handleAuthorizationRedirect` doesn't fit;
+  `CallException.authorizationExceptionOrNull()` recovers the parse failure from a failed
+  `handleAuthorizationRedirect`, e.g. to detect a cancelled login (`access_denied`)
+- `AuthorizationRequest` and `Pkce` are `@Serializable`: persist the pending request (e.g. in a `SavedStateHandle`)
+  before launching the browser so the flow survives process death, and pass the restored `pkce`/`state` back in
+- An OIDC `nonce` is not sent by default - this library does not validate ID tokens. Apps that verify the claim themselves can add one via the
+  decorator and check it with `JWT.parseOrNull(tokens.idToken)`
+- Prefer the platform's browser integration over an embedded WebView (RFC 8252):
+    - **Android**: Custom Tabs (`CustomTabsIntent`) or AppAuth; declare an `intent-filter` (or App Link) for the redirect URI and feed
+      `intent.data.toString()` to `handleAuthorizationRedirect` - the [Custom Tabs recipe](docs/keycloak-android-custom-tabs.md) shows the
+      complete integration (manifest, redirect receiver, view model, process death, cancellation)
+    - **iOS/macOS**: `ASWebAuthenticationSession(url:callbackURLScheme:)`; pass `callbackURL.absoluteString`
+    - **Desktop/JVM**: open the URL in the system browser and listen on a loopback redirect (`http://127.0.0.1:{port}/callback`) with a throwaway
+      embedded server
+- For first-party logins into your own realm (enterprise/kiosk apps), `androidMain` provides
+  `KeycloakWebViewClient(request) { redirectedUrl -> ... }`, a `WebViewClient` that intercepts the redirect and loads everything else normally.
+  Caveats of any embedded WebView: brokered identity providers (e.g. Google) block WebView logins, passkeys/WebAuthn do not work, no SSO cookie
+  sharing with the browser, and the Keycloak login page requires
+  `javaScriptEnabled = true` (plus `domStorageEnabled = true`)
+- Custom integrations can use `AuthorizationRequest.matchesRedirect(url)` to decide when a navigation is the redirect (compares scheme, host, port,
+  and path; ignores query and fragment; trailing slashes are normalized unless
+  `normalizePath = false`)
+
+Integration tests against a real Keycloak instance (including a headless run of the Authorization Code + PKCE flow)
+live in `src/jvmTest` and are gated on `KEYCLOAK_BASE_URL`; see [`keycloak-testenv/`](keycloak-testenv/README.md) for the Docker setup.
 
 ## Dependencies
 

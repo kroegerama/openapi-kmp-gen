@@ -8,8 +8,8 @@
 # OpenAPI KMP Gen
 
 This gradle plugin, the CLI (and companion library) are the successor of the jvm/android only
-plugin [OpenAPI KGen](https://github.com/kroegerama/openapi-kgen).
-It comes with support for KMP and the targets JVM, Android, iOS, macOS, Windows and Linux.
+plugin [OpenAPI KGen](https://github.com/kroegerama/openapi-kgen). It comes with support for KMP and the targets JVM, Android, iOS, macOS, Windows and
+Linux.
 
 ## Features
 
@@ -20,15 +20,18 @@ It comes with support for KMP and the targets JVM, Android, iOS, macOS, Windows 
 - Json support via kotlinx-serialization
 - Date types via kotlinx-datetime
 - Http calls via ktor
-- Supports security
+- Supports security (`oauth2` and `openIdConnect` schemes are generated as bearer auth)
+- Keycloak / OpenID Connect companion client (password, client-credentials and Authorization Code + PKCE grants, automatic token refresh)
 - Generated named primitives
 - Allows injection of decorators for ktor client, serialization, etc.
 - Allows filtering of APIs to only generate a subset of the OpenAPI using tags
 
 ### Example
 
-- OpenAPI 3.0 [testspec_30.yaml](generated/testspec_30.yaml) will generate: [generated_30](generated/src/commonMain/kotlin/com/kroegerama/kmp/gen/generated30)
-- OpenAPI 3.1 [testspec_31.yaml](generated/testspec_31.yaml) will generate: [generated_31](generated/src/commonMain/kotlin/com/kroegerama/kmp/gen/generated31)
+- OpenAPI 3.0 [testspec_30.yaml](generated/testspec_30.yaml) will
+  generate: [generated_30](generated/src/commonMain/kotlin/com/kroegerama/kmp/gen/generated30)
+- OpenAPI 3.1 [testspec_31.yaml](generated/testspec_31.yaml) will
+  generate: [generated_31](generated/src/commonMain/kotlin/com/kroegerama/kmp/gen/generated31)
 
 ## Technologies used
 
@@ -62,6 +65,7 @@ kmpgen = { id = "com.kroegerama.openapi-kmp-gen", version.ref = "kmpgen" }
 ```
 
 Register the plugin in your toplevel `build.gradle.kts`:
+
 ```kotlin
 plugins {
     alias(libs.plugins.kmpgen) apply false
@@ -70,6 +74,7 @@ plugins {
 ```
 
 Add the plugin in your module `build.gradle.kts`:
+
 ```kotlin
 plugins {
     alias(libs.plugins.kmpgen)
@@ -96,9 +101,8 @@ kmpgen {
 
 ## Companion library
 
-The companion library is automatically added as a dependency, when the plugin is added.
-It centralizes the most important building blocks, all generated apis need.
-The library can be used by any project (KMP or non-KMP).
+The companion library is automatically added as a dependency, when the plugin is added. It centralizes the most important building blocks, all
+generated apis need. The library can be used by any project (KMP or non-KMP).
 
 - [Companion Readme](companion/README.md)
 

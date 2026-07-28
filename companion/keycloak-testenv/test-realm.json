@@ -1,0 +1,47 @@
+{
+  "realm": "test",
+  "enabled": true,
+  "accessTokenLifespan": 30,
+  "clients": [
+    {
+      "clientId": "test-public",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "redirectUris": [
+        "http://localhost:8123/*",
+        "myapp://callback"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "test-confidential",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "test-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    }
+  ],
+  "users": [
+    {
+      "username": "tester",
+      "enabled": true,
+      "email": "tester@example.com",
+      "emailVerified": true,
+      "firstName": "Test",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}
