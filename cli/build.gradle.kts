@@ -31,6 +31,13 @@ dependencies {
 }
 
 tasks.shadowJar {
+    // transformers (service files, kotlin_module merging) need to see all duplicates;
+    // everything else keeps first-wins semantics to avoid duplicate jar entries
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    filesNotMatching(listOf("META-INF/services/**", "META-INF/*.kotlin_module")) {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+
     archiveBaseName = "openapi-kmp-gen-cli"
     archiveClassifier = "shadow"
 
