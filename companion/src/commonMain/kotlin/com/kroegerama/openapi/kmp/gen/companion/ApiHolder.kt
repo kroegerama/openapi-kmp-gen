@@ -30,6 +30,7 @@ public abstract class ApiHolder {
         }
 
     private val authProviders: AtomicReference<Map<String, AuthItemProvider>> = AtomicReference(emptyMap())
+    private val unauthorizedHandler: AtomicReference<UnauthorizedHandler?> = AtomicReference(null)
 
     public open fun HttpClientConfig<PlatformHttpClientEngineConfig>.apiConfig() {
         install(ContentNegotiation) {
@@ -41,6 +42,9 @@ public abstract class ApiHolder {
         install(AuthPlugin) {
             authItem { key ->
                 authProviders.load()[key]?.invoke()
+            }
+            onUnauthorized { appliedItems ->
+                this@ApiHolder.unauthorizedHandler.load()?.invoke(appliedItems) ?: false
             }
         }
     }
@@ -69,6 +73,21 @@ public abstract class ApiHolder {
             decorator()
         }
         previous?.close()
+    }
+
+    /**
+     * Sets the [UnauthorizedHandler] consulted when a request with auth keys is answered with
+     * 401 Unauthorized; the request is retried once with freshly resolved auth values when the
+     * handler returns `true`. Like the auth providers, the handler is read per request, so it
+     * can be set or replaced without rebuilding the client. Pass `null` to remove it.
+     *
+     * ```kotlin
+     * Api.setAuthProvider(Auth.MyScheme(keycloak.asBearerProvider()))
+     * Api.setUnauthorizedHandler(keycloak.asUnauthorizedHandler())
+     * ```
+     */
+    public fun setUnauthorizedHandler(handler: UnauthorizedHandler?) {
+        unauthorizedHandler.store(handler)
     }
 
     protected fun setAuthProvider(id: String, provider: AuthItemProvider) {
