@@ -22,9 +22,9 @@ The flow:
 - Dependencies (beyond the usual Compose/lifecycle setup):
 
 ```kotlin
-implementation("androidx.browser:browser:1.8.0")
+implementation("androidx.browser:browser:1.10.0")
 // SavedStateHandle.saved delegate (kotlinx-serialization based), 2.9.0 or newer:
-implementation("androidx.lifecycle:lifecycle-viewmodel-savedstate:2.9.1")
+implementation("androidx.lifecycle:lifecycle-viewmodel-savedstate:2.11.0")
 ```
 
 ## Manifest
@@ -82,6 +82,23 @@ The pending request is stored via the `SavedStateHandle.saved` delegate (`androi
 `AuthorizationRequest` is
 `@Serializable`, so no converter is needed. The view model must be **activity-scoped**, because the redirect enters through the activity while the
 login screen renders the state.
+
+Activity-scoped means both sides resolve the view model from the activity's `ViewModelStore`; `ViewModelProvider` caches by key within one store, so
+whoever asks first creates the instance and everyone else gets the same one back. The sample below guarantees this by construction: `MainActivity`
+obtains the view model via `by viewModels()` and passes the instance down to the screen. When resolving inside a composable instead, pass the activity
+as the owner explicitly - inside a `NavHost` destination, a plain `viewModel()` / `hiltViewModel()` call scopes to the `NavBackStackEntry` and
+silently creates a *second* instance with an empty `SavedStateHandle`, so the redirect handled by the activity's instance never reaches the UI:
+
+```kotlin
+// LocalActivity requires androidx.activity:activity-compose 1.10.0 or newer;
+// on older versions, unwrap LocalContext.current to the ComponentActivity.
+val activity = LocalActivity.current as ComponentActivity
+val viewModel: LoginViewModel = viewModel(viewModelStoreOwner = activity, factory = /* same factory as the activity */)
+// Hilt: hiltViewModel(viewModelStoreOwner = activity)
+// Koin: koinViewModel(viewModelStoreOwner = activity)
+```
+
+An activity-scoped view model still restores across process death: its `SavedStateHandle` is backed by the activity's saved instance state.
 
 ```kotlin
 class LoginViewModel(
@@ -212,7 +229,23 @@ fun LoginScreen(viewModel: LoginViewModel) {
 
 Successful login needs no dedicated event: `Keycloak` exposes the session as `tokens` / `isLoggedIn` flows, so navigation away from the login screen
 keys off `keycloak.isLoggedIn`, and the generated API authenticates via
-`Api.setAuthProvider(Auth.MyScheme(keycloak.asBearerProvider()))`.
+`Api.setAuthProvider(Auth.MyScheme(keycloak.asBearerProvider()))`. Optionally add
+`Api.setUnauthorizedHandler(keycloak.asUnauthorizedHandler())`: an API request answered with 401 despite a locally valid access token (e.g. after a
+server-side session termination) then triggers a refresh and is retried once with the fresh token.
+
+## Forcing a fresh login
+
+The Custom Tab shares the browser's cookies, so an existing Keycloak SSO session skips the login form: the authorization request redirects back
+immediately with a fresh code. To force the credentials form, append the standard OIDC `prompt=login` parameter via the `decorator`:
+
+```kotlin
+val request = keycloak.createAuthorizationRequest(redirectUri = REDIRECT_URI) {
+    append("prompt", "login")
+}
+```
+
+Note that `prompt=login` re-authenticates the user but leaves the SSO session itself intact. To switch accounts, end the session first by opening
+Keycloak's `end_session` endpoint in the browser, so the SSO cookie is cleared for all clients of the realm.
 
 ## Covered edge cases
 
