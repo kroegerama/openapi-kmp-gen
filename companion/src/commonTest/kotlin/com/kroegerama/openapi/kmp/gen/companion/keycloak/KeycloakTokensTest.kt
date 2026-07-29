@@ -200,6 +200,19 @@ class KeycloakTokensTest {
     }
 
     @Test
+    fun idTokenParsesAsJwt() {
+        val subject = "user-123"
+        val withIdToken = KeycloakTokens(
+            accessToken = "opaque",
+            idToken = unsignedJwt(sub = subject)
+        )
+        val withoutIdToken = KeycloakTokens(accessToken = "opaque")
+
+        assertEquals(subject, assertNotNull(withIdToken.idJwt).subject)
+        assertNull(withoutIdToken.idJwt)
+    }
+
+    @Test
     fun toStringRedactsTokens() {
         val tokens = KeycloakTokens(
             accessToken = "secret-access",

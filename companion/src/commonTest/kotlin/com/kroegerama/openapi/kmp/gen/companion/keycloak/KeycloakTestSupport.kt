@@ -20,10 +20,11 @@ private val base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
 private fun encode(json: String): String = base64.encode(json.encodeToByteArray())
 
 /** Builds an unsigned JWT that [com.kroegerama.openapi.kmp.gen.companion.JWT.parse] accepts. */
-internal fun unsignedJwt(exp: Long? = null, iat: Long? = null): String {
+internal fun unsignedJwt(exp: Long? = null, iat: Long? = null, sub: String? = null): String {
     val claims = buildList {
         exp?.let { add(""""exp":$it""") }
         iat?.let { add(""""iat":$it""") }
+        sub?.let { add(""""sub":"$it"""") }
     }
     return "${encode("""{"alg":"none","typ":"JWT"}""")}.${encode(claims.joinToString(",", "{", "}"))}.sig"
 }

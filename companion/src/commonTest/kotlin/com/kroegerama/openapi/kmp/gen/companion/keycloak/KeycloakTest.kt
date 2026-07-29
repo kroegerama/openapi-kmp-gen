@@ -1,5 +1,6 @@
 package com.kroegerama.openapi.kmp.gen.companion.keycloak
 
+import com.kroegerama.openapi.kmp.gen.companion.AuthItem
 import com.kroegerama.openapi.kmp.gen.companion.HttpCallException
 import com.kroegerama.openapi.kmp.gen.companion.UnexpectedCallException
 import io.ktor.client.engine.mock.MockEngine
@@ -22,6 +23,7 @@ import kotlinx.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -681,6 +683,126 @@ class KeycloakTest {
         val result = keycloak.refresh()
 
         assertIs<UnexpectedCallException>(result.leftOrNull())
+        assertTrue(engine.requestHistory.isEmpty())
+    }
+
+    @Test
+    fun handleUnauthorizedWithoutSessionReturnsFalse() = runTest {
+        val engine = MockEngine { respondJson(tokenResponseJson("unexpected")) }
+        val keycloak = createKeycloak(engine)
+
+        assertFalse(keycloak.handleUnauthorized("some-token"))
+
+        assertTrue(engine.requestHistory.isEmpty())
+    }
+
+    @Test
+    fun handleUnauthorizedWithReplacedTokenSkipsRefresh() = runTest {
+        val engine = MockEngine { respondJson(tokenResponseJson("unexpected")) }
+        val keycloak = createKeycloak(engine)
+        keycloak.updateTokens(validTokens())
+
+        // The rejected token is not the current one: a concurrent request already refreshed,
+        // so a retry with the current token is worthwhile without another round trip.
+        assertTrue(keycloak.handleUnauthorized("previous-token"))
+
+        assertTrue(engine.requestHistory.isEmpty())
+    }
+
+    @Test
+    fun handleUnauthorizedRefreshesCurrentToken() = runTest {
+        val newAccessToken = unsignedJwt(exp = nowEpochSeconds() + 300)
+        val engine = MockEngine { respondJson(tokenResponseJson(newAccessToken, "refresh-2")) }
+        val keycloak = createKeycloak(engine)
+        // The access token is still valid by its local expiry - the server rejected it early.
+        val tokens = validTokens()
+        keycloak.updateTokens(tokens)
+
+        assertTrue(keycloak.handleUnauthorized(tokens.accessToken))
+
+        assertEquals(1, engine.requestHistory.size)
+        val body = engine.formBody()
+        assertEquals("refresh_token", body["grant_type"])
+        assertEquals(tokens.refreshToken, body["refresh_token"])
+        assertEquals(newAccessToken, keycloak.tokens.value?.accessToken)
+    }
+
+    @Test
+    fun handleUnauthorizedRejectedRefreshEndsSession() = runTest {
+        val engine = MockEngine {
+            respondJson("""{"error":"invalid_grant"}""", HttpStatusCode.BadRequest)
+        }
+        val keycloak = createKeycloak(engine)
+        val events = collectSessionEnded(keycloak)
+        val tokens = validTokens()
+        keycloak.updateTokens(tokens)
+
+        assertFalse(keycloak.handleUnauthorized(tokens.accessToken))
+
+        assertNull(keycloak.tokens.value)
+        yield()
+        assertEquals(listOf(KeycloakSessionEndReason.SessionExpired), events)
+    }
+
+    @Test
+    fun handleUnauthorizedTransientFailureKeepsTokens() = runTest {
+        val engine = MockEngine {
+            respondJson("""{"error":"invalid_client"}""", HttpStatusCode.Unauthorized)
+        }
+        val keycloak = createKeycloak(engine)
+        val tokens = validTokens()
+        keycloak.updateTokens(tokens)
+
+        assertFalse(keycloak.handleUnauthorized(tokens.accessToken))
+
+        assertEquals(tokens, keycloak.tokens.value)
+    }
+
+    @Test
+    fun handleUnauthorizedClientCredentialsSessionRelogins() = runTest {
+        val firstToken = unsignedJwt(exp = nowEpochSeconds() + 300)
+        val newToken = unsignedJwt(exp = nowEpochSeconds() + 600)
+        var calls = 0
+        val engine = MockEngine {
+            calls++
+            respondJson(tokenResponseJson(if (calls == 1) firstToken else newToken))
+        }
+        val keycloak = createKeycloak(engine, clientSecret = "s3cret")
+        assertTrue(keycloak.loginClientCredentials(scopes = listOf("api")).isRight())
+
+        assertTrue(keycloak.handleUnauthorized(firstToken))
+
+        assertEquals(newToken, keycloak.tokens.value?.accessToken)
+        assertEquals(2, engine.requestHistory.size)
+        val body = engine.formBody(1)
+        assertEquals("client_credentials", body["grant_type"])
+        assertEquals("api", body["scope"])
+    }
+
+    @Test
+    fun asUnauthorizedHandlerRefreshesOnBearerItem() = runTest {
+        val newAccessToken = unsignedJwt(exp = nowEpochSeconds() + 300)
+        val engine = MockEngine { respondJson(tokenResponseJson(newAccessToken, "refresh-2")) }
+        val keycloak = createKeycloak(engine)
+        val tokens = validTokens()
+        keycloak.updateTokens(tokens)
+
+        val handler = keycloak.asUnauthorizedHandler()
+
+        assertTrue(handler(mapOf("k" to AuthItem.Bearer(tokens.accessToken))))
+        assertEquals(newAccessToken, keycloak.tokens.value?.accessToken)
+    }
+
+    @Test
+    fun asUnauthorizedHandlerIgnoresRequestsWithoutBearer() = runTest {
+        val engine = MockEngine { respondJson(tokenResponseJson("unexpected")) }
+        val keycloak = createKeycloak(engine)
+        keycloak.updateTokens(validTokens())
+
+        val handler = keycloak.asUnauthorizedHandler()
+
+        assertFalse(handler(emptyMap()))
+        assertFalse(handler(mapOf("k" to AuthItem.ApiKey(AuthItem.Position.Header, "X-API-Key", "v"))))
         assertTrue(engine.requestHistory.isEmpty())
     }
 

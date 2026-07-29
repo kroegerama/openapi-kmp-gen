@@ -175,6 +175,56 @@ class ApiHolderTest {
     }
 
     @Test
+    fun unauthorizedHandlerRetriesThroughApiConfig() = runTest {
+        // Uses the full production stack (defaultConfig sets expectSuccess = true), so this
+        // also proves the retry happens before Ktor's response validation throws.
+        var calls = 0
+        val factory = mockEngineFactory { request ->
+            requests += request
+            calls++
+            if (calls == 1) respond("nope", HttpStatusCode.Unauthorized) else respond("")
+        }
+        val holder = TestApiHolder().apply {
+            updateClient(userAgent = null, createHttpClient = factory)
+        }
+        var token = "t1"
+        val handledItems = mutableListOf<Map<String, AuthItem>>()
+        holder.register("bearer") { AuthItem.Bearer(token) }
+        holder.setUnauthorizedHandler { appliedItems ->
+            handledItems += appliedItems
+            token = "t2"
+            true
+        }
+
+        val response = holder.client.get("x") { authKeys("bearer") }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(listOf(mapOf<String, AuthItem>("bearer" to AuthItem.Bearer("t1"))), handledItems)
+        assertEquals("Bearer t1", requests[requests.size - 2].headers[HttpHeaders.Authorization])
+        assertEquals("Bearer t2", requests.last().headers[HttpHeaders.Authorization])
+    }
+
+    @Test
+    fun clearedUnauthorizedHandlerStopsRetrying() = runTest {
+        var calls = 0
+        val factory = mockEngineFactory {
+            calls++
+            respond("nope", HttpStatusCode.Unauthorized)
+        }
+        val holder = TestApiHolder().apply {
+            updateClient(userAgent = null, createHttpClient = factory)
+        }
+        holder.register("bearer") { AuthItem.Bearer("tok") }
+        holder.setUnauthorizedHandler { true }
+        holder.setUnauthorizedHandler(null)
+
+        assertFailsWith<ClientRequestException> {
+            holder.client.get("x") { authKeys("bearer") }
+        }
+        assertEquals(1, calls)
+    }
+
+    @Test
     fun contentNegotiationUsesHolderJson() = runTest {
         val factory = mockEngineFactory {
             respond(
