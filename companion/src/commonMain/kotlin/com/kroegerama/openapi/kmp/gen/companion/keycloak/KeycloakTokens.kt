@@ -62,6 +62,9 @@ public data class KeycloakTokens(
     /** [refreshToken] parsed as JWT, or `null` if it is absent or opaque. The signature is not verified. */
     public val refreshJwt: JWT? by lazy { refreshToken?.let(JWT::parseOrNull) }
 
+    /** [idToken] parsed as JWT, or `null` if it is absent or malformed. The signature is not verified. */
+    public val idJwt: JWT? by lazy { idToken?.let(JWT::parseOrNull) }
+
     /**
      * Whether the access token is expired. Prefers the JWT `exp` claim; falls back to
      * [obtainedAt] + [expiresIn] when the token is opaque or has no `exp` claim. A lifespan
