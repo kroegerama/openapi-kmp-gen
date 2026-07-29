@@ -9,6 +9,7 @@ import com.kroegerama.openapi.kmp.gen.companion.AuthItem
 import com.kroegerama.openapi.kmp.gen.companion.CallException
 import com.kroegerama.openapi.kmp.gen.companion.HttpCallException
 import com.kroegerama.openapi.kmp.gen.companion.PlatformHttpClientEngineConfig
+import com.kroegerama.openapi.kmp.gen.companion.UnauthorizedHandler
 import com.kroegerama.openapi.kmp.gen.companion.UnexpectedCallException
 import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
 import com.kroegerama.openapi.kmp.gen.companion.createPlatformHttpClient
@@ -122,7 +123,13 @@ public fun createKeycloakHttpClient(
  * ```kotlin
  * val keycloak = Keycloak(Url("https://auth.example.com"), realm = "my-realm", clientId = "my-app")
  * Api.setAuthProvider(Auth.OIDCAuth(keycloak.asBearerProvider()))
+ * Api.setUnauthorizedHandler(keycloak.asUnauthorizedHandler())
  * ```
+ *
+ * [bearerOrNull] refreshes proactively, based on the token's own expiry information. A server
+ * may reject an access token earlier - e.g. after an administrator terminated the session -
+ * which surfaces as a 401 on an API request; [handleUnauthorized] / [asUnauthorizedHandler]
+ * cover that reactive case.
  *
  * Token persistence is optional and fully delegated to the application via [KeycloakTokenLoader]
  * and [KeycloakTokenListener]; the serialized form is the [KeycloakTokens] class itself.
@@ -356,7 +363,9 @@ public class Keycloak(
      * For [pkce] and [state], `null` (the default) generates fresh secure values; pass
      * persisted values to rebuild an identical request after process death.
      *
-     * @param decorator appends additional query parameters, e.g. `append("prompt", "login")`.
+     * @param decorator appends additional query parameters. Use it for the optional OIDC and
+     *   Keycloak parameters, e.g. `append("prompt", "login")` to force re-authentication or
+     *   `append("login_hint", email)` to prefill the username.
      * @throws IllegalStateException when [endpoints] contains no
      *   [KeycloakEndpoints.authorizationEndpoint].
      * @throws IllegalArgumentException when [redirectUri] is not a valid URL.
@@ -489,6 +498,46 @@ public class Keycloak(
      * `Api.setAuthProvider(Auth.MyScheme(keycloak.asBearerProvider()))`.
      */
     public fun asBearerProvider(): suspend () -> AuthItem.Bearer? = ::bearerOrNull
+
+    /**
+     * Handles a 401 Unauthorized received by an API request that carried [rejectedAccessToken],
+     * returning whether a retry is worthwhile. This complements [bearerOrNull], which refreshes
+     * only tokens that are expired by their local expiry information: a server may reject an
+     * access token earlier, e.g. after an administrator terminated the session or the realm
+     * keys rotated.
+     *
+     * When the current access token already differs from [rejectedAccessToken], the session was
+     * renewed in the meantime (e.g. by a concurrent request) and `true` is returned without a
+     * server round trip. Otherwise a refresh is forced with the semantics of [refresh]: a
+     * rejected refresh token ends the session - [sessionEnded] emits
+     * [KeycloakSessionEndReason.SessionExpired] - and `false` is returned (a session obtained
+     * via [loginClientCredentials] is renewed by repeating that request instead), while
+     * transient failures keep the current tokens. Returns `false` while logged out.
+     */
+    public suspend fun handleUnauthorized(rejectedAccessToken: String): Boolean = mutex.withLock {
+        ensureLoaded()
+        val current = mutableTokens.value ?: return false
+        if (current.accessToken != rejectedAccessToken) return true
+        refreshLocked().isRight()
+    }
+
+    /**
+     * This instance as an [UnauthorizedHandler] for
+     * [com.kroegerama.openapi.kmp.gen.companion.ApiHolder.setUnauthorizedHandler]: a 401 on a
+     * request that carried a bearer token triggers [handleUnauthorized], so the request is
+     * retried once with a fresh token when the session could be renewed. Intended for APIs
+     * whose bearer tokens all come from this instance; requests without a bearer item are
+     * never retried:
+     *
+     * ```kotlin
+     * Api.setAuthProvider(Auth.MyScheme(keycloak.asBearerProvider()))
+     * Api.setUnauthorizedHandler(keycloak.asUnauthorizedHandler())
+     * ```
+     */
+    public fun asUnauthorizedHandler(): UnauthorizedHandler = { appliedItems ->
+        val bearer = appliedItems.values.filterIsInstance<AuthItem.Bearer>().firstOrNull()
+        bearer != null && handleUnauthorized(bearer.token)
+    }
 
     /** Must be called with [mutex] held. */
     private suspend fun ensureLoaded() {
