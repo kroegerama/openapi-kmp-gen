@@ -15,17 +15,20 @@ import kotlinx.serialization.Serializable
  *   [Keycloak.createAuthorizationRequest] then fails.
  * @property logoutEndpoint the end-session endpoint used for refresh-token logout, or `null`
  *   if the server does not expose one - [Keycloak.logout] then only clears the local state.
+ * @property userInfoEndpoint the OpenID Connect userinfo endpoint, or `null` if unknown -
+ *   [Keycloak.userInfo] then fails.
  */
 @Immutable
 public data class KeycloakEndpoints(
     val tokenEndpoint: Url,
     val authorizationEndpoint: Url? = null,
-    val logoutEndpoint: Url? = null
+    val logoutEndpoint: Url? = null,
+    val userInfoEndpoint: Url? = null
 ) {
     public companion object {
         /**
          * Builds the endpoints from Keycloak's standard URL layout:
-         * `{baseUrl}/realms/{realm}/protocol/openid-connect/{token|auth|logout}`.
+         * `{baseUrl}/realms/{realm}/protocol/openid-connect/{token|auth|logout|userinfo}`.
          *
          * [baseUrl] may contain a path prefix (e.g. a reverse-proxy prefix or the legacy `/auth`);
          * a query or fragment on it is ignored.
@@ -33,7 +36,8 @@ public data class KeycloakEndpoints(
         public fun fromRealm(baseUrl: Url, realm: String): KeycloakEndpoints = KeycloakEndpoints(
             tokenEndpoint = realmUrl(baseUrl, realm, "protocol", "openid-connect", "token"),
             authorizationEndpoint = realmUrl(baseUrl, realm, "protocol", "openid-connect", "auth"),
-            logoutEndpoint = realmUrl(baseUrl, realm, "protocol", "openid-connect", "logout")
+            logoutEndpoint = realmUrl(baseUrl, realm, "protocol", "openid-connect", "logout"),
+            userInfoEndpoint = realmUrl(baseUrl, realm, "protocol", "openid-connect", "userinfo")
         )
 
         /** `{baseUrl}/realms/{realm}/.well-known/openid-configuration` */
@@ -79,7 +83,9 @@ public data class OpenIdConfiguration(
     @SerialName("authorization_endpoint")
     val authorizationEndpoint: String? = null,
     @SerialName("end_session_endpoint")
-    val endSessionEndpoint: String? = null
+    val endSessionEndpoint: String? = null,
+    @SerialName("userinfo_endpoint")
+    val userInfoEndpoint: String? = null
 ) {
     /**
      * Converts the document's endpoint strings to [KeycloakEndpoints].
@@ -89,6 +95,7 @@ public data class OpenIdConfiguration(
     public fun toEndpoints(): KeycloakEndpoints = KeycloakEndpoints(
         tokenEndpoint = Url(tokenEndpoint),
         authorizationEndpoint = authorizationEndpoint?.let(::Url),
-        logoutEndpoint = endSessionEndpoint?.let(::Url)
+        logoutEndpoint = endSessionEndpoint?.let(::Url),
+        userInfoEndpoint = userInfoEndpoint?.let(::Url)
     )
 }

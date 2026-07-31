@@ -75,6 +75,7 @@ class KeycloakIntegrationTest {
         assertEquals(expected.tokenEndpoint, keycloak.endpoints.tokenEndpoint)
         assertEquals(expected.authorizationEndpoint, keycloak.endpoints.authorizationEndpoint)
         assertEquals(expected.logoutEndpoint, keycloak.endpoints.logoutEndpoint)
+        assertEquals(expected.userInfoEndpoint, keycloak.endpoints.userInfoEndpoint)
     }
 
     @Test
@@ -125,6 +126,18 @@ class KeycloakIntegrationTest {
         assertNull(initial.refreshToken)
         val bearer = assertNotNull(keycloak.bearerOrNull())
         assertNotEquals(initial.accessToken, bearer.token)
+    }
+
+    @Test
+    fun userInfoReturnsClaimsForTheLoggedInUser() = integrationTest { baseUrl ->
+        val keycloak = publicKeycloak(baseUrl)
+        // The openid scope is required for userinfo access; it also yields the ID token
+        // whose sub claim userInfo verifies against the response.
+        val tokens = keycloak.login(USERNAME, PASSWORD, scopes = listOf("openid")).expectRight()
+        assertNotNull(tokens.idToken, "The openid scope should yield an ID token")
+        val userInfo = keycloak.userInfo().expectRight()
+        assertEquals(tokens.idJwt?.subject, userInfo.subject)
+        assertEquals(USERNAME, userInfo.preferredUsername)
     }
 
     @Test

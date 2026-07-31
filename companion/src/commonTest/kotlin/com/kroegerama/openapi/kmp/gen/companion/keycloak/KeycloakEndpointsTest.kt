@@ -23,6 +23,10 @@ class KeycloakEndpointsTest {
             "https://auth.example.com/realms/my-realm/protocol/openid-connect/logout",
             endpoints.logoutEndpoint.toString()
         )
+        assertEquals(
+            "https://auth.example.com/realms/my-realm/protocol/openid-connect/userinfo",
+            endpoints.userInfoEndpoint.toString()
+        )
     }
 
     @Test
@@ -71,7 +75,8 @@ class KeycloakEndpointsTest {
             issuer = "https://auth.example.com/realms/my-realm",
             tokenEndpoint = "https://auth.example.com/realms/my-realm/protocol/openid-connect/token",
             authorizationEndpoint = "https://auth.example.com/realms/my-realm/protocol/openid-connect/auth",
-            endSessionEndpoint = "https://auth.example.com/realms/my-realm/protocol/openid-connect/logout"
+            endSessionEndpoint = "https://auth.example.com/realms/my-realm/protocol/openid-connect/logout",
+            userInfoEndpoint = "https://auth.example.com/realms/my-realm/protocol/openid-connect/userinfo"
         )
 
         val endpoints = configuration.toEndpoints()
@@ -88,6 +93,10 @@ class KeycloakEndpointsTest {
             "https://auth.example.com/realms/my-realm/protocol/openid-connect/logout",
             endpoints.logoutEndpoint.toString()
         )
+        assertEquals(
+            "https://auth.example.com/realms/my-realm/protocol/openid-connect/userinfo",
+            endpoints.userInfoEndpoint.toString()
+        )
     }
 
     @Test
@@ -101,5 +110,6 @@ class KeycloakEndpointsTest {
 
         assertNull(endpoints.authorizationEndpoint)
         assertNull(endpoints.logoutEndpoint)
+        assertNull(endpoints.userInfoEndpoint)
     }
 }

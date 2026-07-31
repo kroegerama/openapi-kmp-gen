@@ -20,7 +20,9 @@ import io.ktor.client.HttpClientConfig
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.forms.FormDataContent
+import io.ktor.client.request.header
 import io.ktor.client.request.setBody
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.ParametersBuilder
@@ -44,6 +46,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.json.JsonObject
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -537,6 +540,55 @@ public class Keycloak(
     public fun asUnauthorizedHandler(): UnauthorizedHandler = { appliedItems ->
         val bearer = appliedItems.values.filterIsInstance<AuthItem.Bearer>().firstOrNull()
         bearer != null && handleUnauthorized(bearer.token)
+    }
+
+    /**
+     * Fetches the end-user's claims from the OpenID Connect userinfo endpoint, authenticated
+     * with the current access token (refreshed first when expired, like [bearerOrNull]).
+     * Unlike the locally parsed [KeycloakTokens.idJwt], the returned claims come from a direct
+     * response of the server, so they are trustworthy without local signature validation.
+     *
+     * The endpoint requires a token issued with the `openid` scope - [createAuthorizationRequest]
+     * requests it by default, [login] and [loginClientCredentials] do not. As required by the
+     * OIDC specification, the response's `sub` claim is compared to the ID token's when one is
+     * present; a mismatch fails with an [UnexpectedCallException]. It also fails while logged
+     * out and when [endpoints] contains no [KeycloakEndpoints.userInfoEndpoint].
+     *
+     * A userinfo endpoint configured to respond with a signed or encrypted JWT instead of
+     * plain JSON is not supported, in line with this library not validating token signatures.
+     */
+    public suspend fun userInfo(): Either<CallException, KeycloakUserInfo> {
+        val userInfoEndpoint = endpoints.userInfoEndpoint
+            ?: return UnexpectedCallException(
+                "endpoints.userInfoEndpoint is null - the discovery document did not contain " +
+                    "a userinfo_endpoint, or the endpoints were constructed without one.",
+                null
+            ).left()
+        val bearer = bearerOrNull()
+            ?: return UnexpectedCallException(
+                "No access token available - the userinfo endpoint requires a session.",
+                null
+            ).left()
+        // bearerOrNull just stored any refreshed token set, so this reads the ID token
+        // matching the bearer without taking the mutex again.
+        val idTokenSubject = mutableTokens.value?.idJwt?.subject
+        return httpClient.eitherRequest<JsonObject> {
+            method = HttpMethod.Get
+            url.takeFrom(userInfoEndpoint)
+            header(HttpHeaders.Authorization, "Bearer ${bearer.token}")
+        }.map {
+            KeycloakUserInfo(it.data)
+        }.flatMap { userInfo ->
+            if (idTokenSubject != null && userInfo.subject != idTokenSubject) {
+                UnexpectedCallException(
+                    "The userinfo sub claim '${userInfo.subject}' does not match " +
+                        "the ID token sub claim '$idTokenSubject'.",
+                    null
+                ).left()
+            } else {
+                userInfo.right()
+            }
+        }
     }
 
     /** Must be called with [mutex] held. */
