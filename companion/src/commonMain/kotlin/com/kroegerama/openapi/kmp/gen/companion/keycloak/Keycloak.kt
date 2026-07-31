@@ -170,7 +170,11 @@ public class Keycloak(
 ) {
     /**
      * Convenience constructor using Keycloak's standard realm URL layout,
-     * see [KeycloakEndpoints.fromRealm].
+     * see [KeycloakEndpoints.fromRealm]. The remaining parameters match the primary constructor.
+     *
+     * @param baseUrl the Keycloak base URL, e.g. `Url("https://auth.example.com")`; may contain
+     *   a path prefix.
+     * @param realm the realm name.
      */
     public constructor(
         baseUrl: Url,
@@ -245,6 +249,8 @@ public class Keycloak(
     /**
      * Direct Access Grants (`grant_type=password`) login. Stores the tokens on success.
      *
+     * @param username the resource owner's username.
+     * @param password the resource owner's password.
      * @param scopes optional scopes, joined with a space.
      * @param decorator appends additional form parameters, e.g. `append("totp", otp)`.
      */
@@ -375,6 +381,10 @@ public class Keycloak(
      * For [pkce] and [state], `null` (the default) generates fresh secure values; pass
      * persisted values to rebuild an identical request after process death.
      *
+     * @param redirectUri the URI the browser is redirected to after authentication; must be
+     *   listed in the Keycloak client's "Valid redirect URIs".
+     * @param scopes optional scopes, joined with a space. The default requests `openid`, so
+     *   the token response contains an ID token and [userInfo] works.
      * @param decorator appends additional query parameters. Use it for the optional OIDC and
      *   Keycloak parameters, e.g. `append("prompt", "login")` to force re-authentication or
      *   `append("login_hint", email)` to prefill the username.
@@ -419,6 +429,12 @@ public class Keycloak(
      * Redeems an authorization code (`grant_type=authorization_code`) obtained via the
      * Authorization Code + PKCE flow. Stores the tokens on success, like [login].
      *
+     * @param code the authorization code from the captured redirect,
+     *   see [AuthorizationRequest.parseRedirect].
+     * @param codeVerifier the verifier of the PKCE pair the authorization request was built
+     *   with, see [AuthorizationRequest.pkce].
+     * @param redirectUri the redirect URI the authorization request was built with
+     *   ([AuthorizationRequest.redirectUri]); the token endpoint rejects the code on a mismatch.
      * @param decorator appends additional form parameters.
      */
     public suspend fun exchangeAuthorizationCode(
@@ -949,6 +965,18 @@ public class Keycloak(
  *
  * Fails with an [UnexpectedCallException] when the document's `issuer` is not
  * `{baseUrl}/realms/{realm}`, as required by the OIDC discovery specification.
+ *
+ * @param baseUrl the Keycloak base URL, e.g. `Url("https://auth.example.com")`; may contain
+ *   a path prefix.
+ * @param realm the realm name.
+ * @param clientId the Keycloak client id.
+ * @param clientSecret the client secret for confidential clients, sent in the request body.
+ * @param accessTokenLeeway an access token expiring within this duration is treated as already
+ *   expired. Defaults to [Keycloak.DEFAULT_ACCESS_TOKEN_LEEWAY].
+ * @param tokenLoader see [KeycloakTokenLoader].
+ * @param tokenListener see [KeycloakTokenListener].
+ * @param httpClient the client used for discovery and token requests, see above; `null` (the
+ *   default) creates a [createKeycloakHttpClient].
  */
 public suspend fun Keycloak.Companion.discover(
     baseUrl: Url,
