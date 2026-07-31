@@ -302,4 +302,4 @@ half-completed logout should count as logged out.
 
 For first-party logins into your own realm where a browser round-trip is undesirable (enterprise/kiosk apps),
 `androidMain` provides `KeycloakWebViewClient` as an embedded-WebView fallback - see the
-[companion README](../README.md#authorization-code--pkce) for its caveats.
+[Keycloak guide](keycloak.md#authorization-code--pkce) for its caveats.
