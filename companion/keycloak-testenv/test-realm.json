@@ -15,7 +15,8 @@
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "+"
+        "post.logout.redirect.uris": "+",
+        "oauth2.device.authorization.grant.enabled": "true"
       }
     },
     {
@@ -25,7 +26,10 @@
       "secret": "test-secret",
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": false,
-      "directAccessGrantsEnabled": false
+      "directAccessGrantsEnabled": false,
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "true"
+      }
     }
   ],
   "users": [

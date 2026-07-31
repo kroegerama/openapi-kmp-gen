@@ -21,7 +21,7 @@ Linux.
 - Date types via kotlinx-datetime
 - Http calls via ktor
 - Supports security (`oauth2` and `openIdConnect` schemes are generated as bearer auth)
-- Keycloak / OpenID Connect companion client (password, client-credentials and Authorization Code + PKCE grants, automatic token refresh)
+- Keycloak / OpenID Connect companion client (password, client-credentials, Authorization Code + PKCE and Device Authorization (RFC 8628) grants, automatic token refresh)
 - Generated named primitives
 - Allows injection of decorators for ktor client, serialization, etc.
 - Allows filtering of APIs to only generate a subset of the OpenAPI using tags

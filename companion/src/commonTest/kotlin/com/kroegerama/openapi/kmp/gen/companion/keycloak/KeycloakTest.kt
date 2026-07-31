@@ -990,7 +990,8 @@ class KeycloakTest {
                     "issuer": "https://auth.example.com/realms/test",
                     "token_endpoint": "https://auth.example.com/custom/token",
                     "end_session_endpoint": "https://auth.example.com/custom/logout",
-                    "authorization_endpoint": "https://auth.example.com/custom/auth"
+                    "authorization_endpoint": "https://auth.example.com/custom/auth",
+                    "device_authorization_endpoint": "https://auth.example.com/custom/device"
                 }
                 """.trimIndent()
             )
@@ -1007,6 +1008,7 @@ class KeycloakTest {
         assertEquals("https://auth.example.com/custom/token", keycloak.endpoints.tokenEndpoint.toString())
         assertEquals("https://auth.example.com/custom/auth", keycloak.endpoints.authorizationEndpoint.toString())
         assertEquals("https://auth.example.com/custom/logout", keycloak.endpoints.logoutEndpoint.toString())
+        assertEquals("https://auth.example.com/custom/device", keycloak.endpoints.deviceAuthorizationEndpoint.toString())
     }
 
     @Test

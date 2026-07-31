@@ -11,13 +11,17 @@ import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
+import io.ktor.client.statement.request
 import io.ktor.http.Cookie
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import io.ktor.http.parameters
+import io.ktor.http.takeFrom
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
@@ -76,6 +80,7 @@ class KeycloakIntegrationTest {
         assertEquals(expected.authorizationEndpoint, keycloak.endpoints.authorizationEndpoint)
         assertEquals(expected.logoutEndpoint, keycloak.endpoints.logoutEndpoint)
         assertEquals(expected.userInfoEndpoint, keycloak.endpoints.userInfoEndpoint)
+        assertEquals(expected.deviceAuthorizationEndpoint, keycloak.endpoints.deviceAuthorizationEndpoint)
     }
 
     @Test
@@ -240,6 +245,98 @@ class KeycloakIntegrationTest {
             )
         }
     }
+
+    @Test
+    fun deviceGrantIssuesTokensAfterBrowserApproval() = integrationTest { baseUrl ->
+        val keycloak = publicKeycloak(baseUrl)
+        // The realm forces the S256 challenge method, which Keycloak applies to the device
+        // flow as well - without a PKCE pair the device endpoint rejects the request.
+        val authorization = keycloak
+            .startDeviceAuthorization(scopes = listOf("openid"), pkce = Pkce.generate())
+            .expectRight()
+        assertTrue(authorization.userCode.isNotBlank())
+        assertFalse(authorization.isExpired())
+
+        val pending = async { keycloak.awaitDeviceAuthorization(authorization) }
+        browserClient().use { browser ->
+            browser.driveDeviceVerification(
+                assertNotNull(authorization.verificationUriComplete),
+                approve = true
+            )
+        }
+
+        val tokens = pending.await().expectRight()
+        assertNotNull(tokens.idToken, "The openid scope should yield an ID token")
+        assertEquals(tokens.accessToken, keycloak.currentTokens()?.accessToken)
+    }
+
+    @Test
+    fun deviceGrantSurfacesAccessDeniedWhenTheUserCancels() = integrationTest { baseUrl ->
+        val keycloak = publicKeycloak(baseUrl)
+        val authorization = keycloak.startDeviceAuthorization(pkce = Pkce.generate()).expectRight()
+
+        val pending = async { keycloak.awaitDeviceAuthorization(authorization) }
+        browserClient().use { browser ->
+            browser.driveDeviceVerification(
+                assertNotNull(authorization.verificationUriComplete),
+                approve = false
+            )
+        }
+
+        val exception = assertNotNull(pending.await().leftOrNull())
+        assertEquals("access_denied", exception.keycloakErrorOrNull()?.error)
+        assertNull(keycloak.currentTokens())
+    }
+
+    /**
+     * Drives Keycloak's device verification pages: opens [verificationUriComplete], logs in
+     * when the login form appears, and submits every following form (hidden inputs included)
+     * until no form is left. Keycloak treats a submitted `cancel` parameter as a denial, its
+     * absence as approval - the page sequence itself differs between Keycloak versions, so
+     * the forms are followed generically instead of matching specific templates.
+     */
+    private suspend fun HttpClient.driveDeviceVerification(
+        verificationUriComplete: String,
+        approve: Boolean
+    ) {
+        var response = get(verificationUriComplete)
+        repeat(8) {
+            when (response.status) {
+                HttpStatusCode.Found -> {
+                    val location = assertNotNull(response.headers[HttpHeaders.Location])
+                    response = get(resolveUrl(response.request.url, location))
+                }
+
+                HttpStatusCode.OK -> {
+                    val body = response.bodyAsText()
+                    val formAction = Regex("""<form[^>]+action="([^"]+)"""")
+                        .find(body)?.groupValues?.get(1)?.replace("&amp;", "&")
+                        ?: return // no form left - the verification flow is complete
+                    response = submitForm(
+                        url = resolveUrl(response.request.url, formAction),
+                        formParameters = parameters {
+                            Regex("""<input[^>]+type="hidden"[^>]+name="([^"]+)"[^>]+value="([^"]*)"""")
+                                .findAll(body)
+                                .forEach { append(it.groupValues[1], it.groupValues[2]) }
+                            if ("""name="username"""" in body) {
+                                append("username", USERNAME)
+                                append("password", PASSWORD)
+                            }
+                            if (!approve && """name="cancel"""" in body) {
+                                append("cancel", "")
+                            }
+                        }
+                    )
+                }
+
+                else -> fail("Unexpected status ${response.status} while driving the device verification")
+            }
+        }
+        fail("The device verification did not complete within the expected number of steps")
+    }
+
+    private fun resolveUrl(base: Url, location: String): String =
+        if (location.startsWith("http")) location else URLBuilder(base).takeFrom(location).buildString()
 
     /**
      * A cookie-aware client that can play the browser for Keycloak's plain HTML pages -

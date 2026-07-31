@@ -19,18 +19,21 @@ import kotlinx.serialization.Serializable
  *   fails.
  * @property userInfoEndpoint the OpenID Connect userinfo endpoint, or `null` if unknown -
  *   [Keycloak.userInfo] then fails.
+ * @property deviceAuthorizationEndpoint the RFC 8628 device authorization endpoint, or `null`
+ *   if unknown - [Keycloak.startDeviceAuthorization] then fails.
  */
 @Immutable
 public data class KeycloakEndpoints(
     val tokenEndpoint: Url,
     val authorizationEndpoint: Url? = null,
     val logoutEndpoint: Url? = null,
-    val userInfoEndpoint: Url? = null
+    val userInfoEndpoint: Url? = null,
+    val deviceAuthorizationEndpoint: Url? = null
 ) {
     public companion object {
         /**
          * Builds the endpoints from Keycloak's standard URL layout:
-         * `{baseUrl}/realms/{realm}/protocol/openid-connect/{token|auth|logout|userinfo}`.
+         * `{baseUrl}/realms/{realm}/protocol/openid-connect/{token|auth|logout|userinfo|auth/device}`.
          *
          * [baseUrl] may contain a path prefix (e.g. a reverse-proxy prefix or the legacy `/auth`);
          * a query or fragment on it is ignored.
@@ -39,7 +42,8 @@ public data class KeycloakEndpoints(
             tokenEndpoint = realmUrl(baseUrl, realm, "protocol", "openid-connect", "token"),
             authorizationEndpoint = realmUrl(baseUrl, realm, "protocol", "openid-connect", "auth"),
             logoutEndpoint = realmUrl(baseUrl, realm, "protocol", "openid-connect", "logout"),
-            userInfoEndpoint = realmUrl(baseUrl, realm, "protocol", "openid-connect", "userinfo")
+            userInfoEndpoint = realmUrl(baseUrl, realm, "protocol", "openid-connect", "userinfo"),
+            deviceAuthorizationEndpoint = realmUrl(baseUrl, realm, "protocol", "openid-connect", "auth", "device")
         )
 
         /** `{baseUrl}/realms/{realm}/.well-known/openid-configuration` */
@@ -87,7 +91,9 @@ public data class OpenIdConfiguration(
     @SerialName("end_session_endpoint")
     val endSessionEndpoint: String? = null,
     @SerialName("userinfo_endpoint")
-    val userInfoEndpoint: String? = null
+    val userInfoEndpoint: String? = null,
+    @SerialName("device_authorization_endpoint")
+    val deviceAuthorizationEndpoint: String? = null
 ) {
     /**
      * Converts the document's endpoint strings to [KeycloakEndpoints].
@@ -98,6 +104,7 @@ public data class OpenIdConfiguration(
         tokenEndpoint = Url(tokenEndpoint),
         authorizationEndpoint = authorizationEndpoint?.let(::Url),
         logoutEndpoint = endSessionEndpoint?.let(::Url),
-        userInfoEndpoint = userInfoEndpoint?.let(::Url)
+        userInfoEndpoint = userInfoEndpoint?.let(::Url),
+        deviceAuthorizationEndpoint = deviceAuthorizationEndpoint?.let(::Url)
     )
 }

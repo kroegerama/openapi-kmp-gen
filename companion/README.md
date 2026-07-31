@@ -18,8 +18,9 @@ com.kroegerama.openapi.kmp.gen.companion
 ├── FormDataContent.kt        # Helpers to convert @Serializable objects to form data
 ├── JWT.kt                    # JWT parser (no signature validation)
 └── keycloak/
-    ├── Keycloak.kt               # Keycloak client: login, auto-refresh, logout, discovery, auth-code flow
+    ├── Keycloak.kt               # Keycloak client: login, auto-refresh, logout, discovery, auth-code and device flows
     ├── KeycloakAuthorization.kt  # Authorization Code + PKCE request building and redirect parsing
+    ├── KeycloakDeviceAuthorization.kt # RFC 8628 device grant: user code + verification URI handle
     ├── KeycloakEndpoints.kt      # Realm URL convention + OpenID Connect discovery model
     ├── KeycloakTokens.kt         # Serializable token set with expiry checks
     ├── Pkce.kt                   # PKCE (RFC 7636) S256 verifier/challenge pair
@@ -118,8 +119,8 @@ Self-contained Keycloak / OpenID Connect client (`keycloak` subpackage) that obt
 `HttpClient` (`createKeycloakHttpClient()`, with conservative timeouts so a hung token request cannot stall API calls), never the `ApiHolder` client,
 so token requests bypass the API's auth plugin.
 
-- Grants: `login(username, password)` (Direct Access Grants), `loginClientCredentials()`, and the Authorization Code + PKCE flow (see below); all
-  accept optional scopes and extra parameters (e.g. `append("totp", otp)`)
+- Grants: `login(username, password)` (Direct Access Grants), `loginClientCredentials()`, the Authorization Code + PKCE flow, and the Device
+  Authorization Grant (both below); all accept optional scopes and extra parameters (e.g. `append("totp", otp)`)
 - Endpoints: `KeycloakEndpoints.fromRealm(baseUrl, realm)` builds Keycloak's standard URL layout; `Keycloak.discover(...)` resolves them from
   `.well-known/openid-configuration` instead
 - `bearerOrNull()` returns the current access token as `AuthItem.Bearer`, refreshing it first when expired (configurable leeway, single-flight behind
@@ -205,7 +206,31 @@ val result = keycloak.handleAuthorizationRedirect(request, capturedRedirectUrl)
   "Valid post logout redirect URIs"), the app opens it in the browser and captures the redirect, and `handleLogoutRedirect` validates `state` and
   clears the local tokens. `LogoutRequest` is `@Serializable` and offers `parseRedirect`/`matchesRedirect` like its login counterpart
 
-Integration tests against a real Keycloak instance (including a headless run of the Authorization Code + PKCE flow)
+#### Device Authorization Grant (RFC 8628)
+
+The login flow for devices where a browser redirect is awkward - TVs, CLIs, kiosks: the user completes the verification on a second device while the
+app polls for the result.
+
+```kotlin
+val authorization = keycloak.startDeviceAuthorization(scopes = listOf("openid")).getOrElse { return }
+// show authorization.userCode and authorization.verificationUri to the user,
+// or render authorization.verificationUriComplete as a QR code
+val result = keycloak.awaitDeviceAuthorization(authorization)
+// tokens are stored; refresh/persistence/asBearerProvider() work as usual
+```
+
+- `awaitDeviceAuthorization` polls the token endpoint at the server-announced interval and honors `slow_down` answers; it suspends until the user
+  approved or declined - cancel the calling coroutine to abort (e.g. when the user dismisses the screen). Polling does not hold the client's internal
+  lock, so concurrent token operations stay unblocked
+- Terminal failures surface as the underlying `CallException`; `keycloakErrorOrNull()?.error` distinguishes `access_denied` (the user declined) from
+  `expired_token` (the codes lapsed - start a new authorization)
+- `DeviceAuthorization` is `@Serializable`, so a pending flow can survive process death; `isExpired()` tells whether a persisted authorization is
+  still worth resuming
+- RFC 8628 does not include PKCE, but Keycloak requires it on the device flow when the client's "Proof Key for Code Exchange Code Challenge Method"
+  is enforced - pass `pkce = Pkce.generate()` for such clients; the verifier is sent automatically with every poll
+- The grant must be enabled on the Keycloak client: "OAuth 2.0 Device Authorization Grant" in the client's capability config
+
+Integration tests against a real Keycloak instance (including headless runs of the Authorization Code + PKCE and device flows)
 live in `src/jvmTest` and are gated on `KEYCLOAK_BASE_URL`; see [`keycloak-testenv/`](keycloak-testenv/README.md) for the Docker setup.
 
 ## Dependencies

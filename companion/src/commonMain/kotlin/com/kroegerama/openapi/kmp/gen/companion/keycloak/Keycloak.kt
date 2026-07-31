@@ -33,6 +33,7 @@ import io.ktor.http.takeFrom
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.util.generateNonceSuspend
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,6 +48,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonObject
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -116,9 +118,11 @@ public fun createKeycloakHttpClient(
 /**
  * A Keycloak client that obtains, stores, and refreshes OAuth 2.0 tokens.
  *
- * Supported grants: [login] (Direct Access Grants / password), [loginClientCredentials], and
+ * Supported grants: [login] (Direct Access Grants / password), [loginClientCredentials],
  * the Authorization Code + PKCE flow via [createAuthorizationRequest] /
- * [handleAuthorizationRedirect] (browser presentation is the application's responsibility).
+ * [handleAuthorizationRedirect] (browser presentation is the application's responsibility),
+ * and the Device Authorization Grant via [startDeviceAuthorization] /
+ * [awaitDeviceAuthorization].
  * Obtained tokens are refreshed automatically by [bearerOrNull] when the access token is
  * expired, which makes [asBearerProvider] a drop-in provider for a generated bearer `Auth`
  * variant:
@@ -473,6 +477,119 @@ public class Keycloak(
         }
 
     /**
+     * Starts an OAuth 2.0 Device Authorization Grant (RFC 8628) by requesting a device code
+     * and user code from the device authorization endpoint. Intended for devices where a
+     * browser redirect is awkward (TVs, CLIs, kiosks): display
+     * [DeviceAuthorization.userCode] and [DeviceAuthorization.verificationUri] to the user
+     * (or encode [DeviceAuthorization.verificationUriComplete] in a QR code), then call
+     * [awaitDeviceAuthorization] to poll for the tokens.
+     *
+     * The grant must be enabled on the Keycloak client ("OAuth 2.0 Device Authorization Grant"
+     * in the client's capability config); a client without it answers with
+     * `unauthorized_client`. It also fails when [endpoints] contains no
+     * [KeycloakEndpoints.deviceAuthorizationEndpoint].
+     *
+     * @param scopes optional scopes, joined with a space. Add `"openid"` for an ID token and
+     *   [userInfo] access.
+     * @param pkce an optional PKCE (`S256`) pair, carried into the returned
+     *   [DeviceAuthorization] so [awaitDeviceAuthorization] sends the verifier with every
+     *   poll. RFC 8628 does not include PKCE, but Keycloak requires it here when the
+     *   client's "Proof Key for Code Exchange Code Challenge Method" is enforced - pass
+     *   [Pkce.generate] for such clients.
+     * @param decorator appends additional form parameters.
+     */
+    public suspend fun startDeviceAuthorization(
+        scopes: List<String> = emptyList(),
+        pkce: Pkce? = null,
+        decorator: ParametersBuilder.() -> Unit = {}
+    ): Either<CallException, DeviceAuthorization> {
+        val deviceAuthorizationEndpoint = endpoints.deviceAuthorizationEndpoint
+            ?: return UnexpectedCallException(
+                "endpoints.deviceAuthorizationEndpoint is null - the discovery document did not " +
+                    "contain a device_authorization_endpoint, or the endpoints were constructed " +
+                    "without one.",
+                null
+            ).left()
+        return httpClient.eitherRequest<DeviceAuthorization> {
+            method = HttpMethod.Post
+            url.takeFrom(deviceAuthorizationEndpoint)
+            setBody(FormDataContent(parameters {
+                appendClient()
+                appendScopes(scopes)
+                if (pkce != null) {
+                    append("code_challenge", pkce.codeChallenge)
+                    append("code_challenge_method", Pkce.CHALLENGE_METHOD_S256)
+                }
+                decorator()
+            }))
+        }.map { it.data.copy(pkce = pkce) }
+    }
+
+    /**
+     * Polls the token endpoint (`grant_type=urn:ietf:params:oauth:grant-type:device_code`)
+     * until the user approved or declined the [authorization], respecting its announced poll
+     * interval and the server's `slow_down` requests (RFC 8628 section 3.5). Stores the
+     * tokens on success, like [login].
+     *
+     * The call suspends for the whole flow - typically many seconds to minutes, while the
+     * user completes the verification on a second device; cancel the calling coroutine to
+     * abort, e.g. when the user dismisses the screen. Polling does not hold this instance's
+     * internal lock, so concurrent token operations stay unblocked.
+     *
+     * Terminal failures surface as the underlying [CallException]; inspect them via
+     * [keycloakErrorOrNull]:
+     *
+     * ```kotlin
+     * val declined = exception.keycloakErrorOrNull()?.error == "access_denied"
+     * val expired = exception.keycloakErrorOrNull()?.error == "expired_token"
+     * ```
+     *
+     * The server decides when the codes expire (`expired_token`). A server that keeps
+     * reporting `authorization_pending` beyond [DeviceAuthorization.expiresAt] is cut off
+     * with an [UnexpectedCallException], so the call always terminates.
+     *
+     * @param decorator appends additional form parameters to each poll request.
+     */
+    public suspend fun awaitDeviceAuthorization(
+        authorization: DeviceAuthorization,
+        decorator: ParametersBuilder.() -> Unit = {}
+    ): Either<CallException, KeycloakTokens> {
+        // A non-positive interval from a misbehaving server must not turn into a busy loop.
+        var interval = authorization.interval.coerceAtLeast(1).seconds
+        while (true) {
+            // Delay first: the user cannot have approved before seeing the code.
+            delay(interval)
+            val result = tokenRequest {
+                append("grant_type", DEVICE_CODE_GRANT_TYPE)
+                append("device_code", authorization.deviceCode)
+                authorization.pkce?.let { append("code_verifier", it.codeVerifier) }
+                decorator()
+            }.onRight { tokens ->
+                mutex.withLock {
+                    ensureLoaded()
+                    clientCredentialsRelogin = null
+                    store(tokens)
+                }
+            }
+            val exception = result.leftOrNull() ?: return result
+            when (exception.devicePollErrorOrNull()) {
+                "authorization_pending" -> Unit
+                "slow_down" -> interval += SLOW_DOWN_INTERVAL_INCREASE
+                else -> return result
+            }
+            // The server stays authoritative on expiry: the local deadline is only checked
+            // after a pending answer, as a bound against a server that never reports
+            // expired_token (or severe clock skew).
+            if (Clock.System.now() > authorization.expiresAt) {
+                return UnexpectedCallException(
+                    "The device code expired while the server still reported a pending authorization.",
+                    null
+                ).left()
+            }
+        }
+    }
+
+    /**
      * Builds an OIDC RP-Initiated Logout request for the end-session endpoint. Presenting
      * [LogoutRequest.url] in a browser ends the Keycloak SSO session held in browser cookies,
      * which the backchannel [logout] cannot reach: after a plain [logout], the next
@@ -766,6 +883,17 @@ public class Keycloak(
         return keycloakErrorOrNull()?.error == "invalid_grant"
     }
 
+    /**
+     * The Keycloak error code of a device-flow poll response that may allow further polling
+     * (RFC 8628 reports `authorization_pending` and `slow_down` as HTTP 400), or `null` for
+     * anything else - which is terminal, including transport errors and error bodies that
+     * did not come from the token endpoint.
+     */
+    private suspend fun CallException.devicePollErrorOrNull(): String? {
+        if (this !is HttpCallException || code != HttpStatusCode.BadRequest.value) return null
+        return keycloakErrorOrNull()?.error
+    }
+
     private suspend fun tokenRequest(
         parameters: ParametersBuilder.() -> Unit
     ): Either<CallException, KeycloakTokens> = httpClient.eitherRequest<KeycloakTokens> {
@@ -796,6 +924,11 @@ public class Keycloak(
             HttpStatusCode.BadRequest.value,
             HttpStatusCode.Unauthorized.value
         )
+
+        private const val DEVICE_CODE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code"
+
+        /** RFC 8628 section 3.5: a `slow_down` answer increases the poll interval by 5 seconds. */
+        private val SLOW_DOWN_INTERVAL_INCREASE = 5.seconds
     }
 }
 
