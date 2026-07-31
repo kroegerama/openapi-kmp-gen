@@ -313,6 +313,11 @@ public class Keycloak(
      * Clears the local token state and notifies the Keycloak end-session endpoint (best effort).
      * The local state is cleared even when the server call fails. Without a refresh token or
      * a configured logout endpoint, no request is sent.
+     *
+     * This backchannel call cannot reach an SSO session held in browser cookies: after a
+     * login via [createAuthorizationRequest], the next authorization request may log the
+     * user back in without credentials. Use [createLogoutRequest] to also end the browser
+     * session.
      */
     public suspend fun logout(): Either<CallException, Unit> = mutex.withLock {
         ensureLoaded()
@@ -466,6 +471,95 @@ public class Keycloak(
                 redirectUri = request.redirectUri
             )
         }
+
+    /**
+     * Builds an OIDC RP-Initiated Logout request for the end-session endpoint. Presenting
+     * [LogoutRequest.url] in a browser ends the Keycloak SSO session held in browser cookies,
+     * which the backchannel [logout] cannot reach: after a plain [logout], the next
+     * [createAuthorizationRequest] logs the user back in silently, because the browser is
+     * still authenticated.
+     *
+     * The URL carries an `id_token_hint` when the current token set contains an ID token
+     * (i.e. the session was obtained with the `openid` scope), so the server logs out without
+     * asking; without one, Keycloak presents a confirmation screen first. Create the request
+     * while the session still exists - the local token state stays untouched until
+     * [handleLogoutRedirect] (or an explicit `updateTokens(null)`) clears it.
+     *
+     * [postLogoutRedirectUri] must be listed in the Keycloak client's "Valid post logout
+     * redirect URIs". When set, the server redirects back to it with the `state` echoed;
+     * pass the captured redirect to [handleLogoutRedirect]. When `null`, the browser stays
+     * on a Keycloak page after the logout and no redirect can be captured - clear the local
+     * state via `updateTokens(null)` instead.
+     *
+     * For [state], `null` (the default) generates a fresh secure value; pass a persisted
+     * value to rebuild an identical request after process death.
+     *
+     * @param decorator appends additional query parameters, e.g. `append("ui_locales", "de")`.
+     * @throws IllegalStateException when [endpoints] contains no
+     *   [KeycloakEndpoints.logoutEndpoint].
+     * @throws IllegalArgumentException when [postLogoutRedirectUri] is not a valid URL.
+     */
+    public suspend fun createLogoutRequest(
+        postLogoutRedirectUri: String? = null,
+        state: String? = null,
+        decorator: ParametersBuilder.() -> Unit = {}
+    ): LogoutRequest {
+        val logoutEndpoint = checkNotNull(endpoints.logoutEndpoint) {
+            "endpoints.logoutEndpoint is null - the discovery document did not contain " +
+                "an end_session_endpoint, or the endpoints were constructed without one."
+        }
+        val idToken = currentTokens()?.idToken
+        val actualState = state ?: generateNonceSuspend(32)
+        val url = URLBuilder(logoutEndpoint).apply {
+            with(parameters) {
+                append("client_id", clientId)
+                idToken?.let { append("id_token_hint", it) }
+                if (postLogoutRedirectUri != null) {
+                    append("post_logout_redirect_uri", postLogoutRedirectUri)
+                    append("state", actualState)
+                }
+                decorator()
+            }
+        }.build()
+        return LogoutRequest(
+            url = url,
+            state = actualState,
+            postLogoutRedirectUri = postLogoutRedirectUri
+        )
+    }
+
+    /**
+     * Completes an RP-initiated logout: validates the captured redirect against [request]
+     * (see [LogoutRequest.parseRedirect]) and clears the local token state - [sessionEnded]
+     * emits [KeycloakSessionEndReason.Logout]. No token request is sent; the browser flow
+     * already ended the server-side session.
+     *
+     * A validation failure keeps the current tokens and surfaces as [UnexpectedCallException]
+     * with a [KeycloakAuthorizationException] cause; use [authorizationExceptionOrNull] to
+     * inspect it.
+     */
+    public suspend fun handleLogoutRedirect(
+        request: LogoutRequest,
+        redirectedUrl: Url
+    ): Either<CallException, Unit> =
+        finishLogoutRedirect(request.parseRedirect(redirectedUrl))
+
+    /**
+     * [handleLogoutRedirect] overload for platform APIs that surface the redirect as a
+     * string. An unparseable [redirectedUrl] surfaces like the other parse failures, with a
+     * [KeycloakAuthorizationException.InvalidRedirectUrl] cause.
+     */
+    public suspend fun handleLogoutRedirect(
+        request: LogoutRequest,
+        redirectedUrl: String
+    ): Either<CallException, Unit> =
+        finishLogoutRedirect(request.parseRedirect(redirectedUrl))
+
+    private suspend fun finishLogoutRedirect(
+        parsed: Either<KeycloakAuthorizationException, Unit>
+    ): Either<CallException, Unit> = parsed
+        .mapLeft<CallException> { UnexpectedCallException(it.message, it) }
+        .onRight { updateTokens(null) }
 
     /**
      * Returns a bearer item for the current access token, refreshing it first when it is

@@ -244,8 +244,48 @@ val request = keycloak.createAuthorizationRequest(redirectUri = REDIRECT_URI) {
 }
 ```
 
-Note that `prompt=login` re-authenticates the user but leaves the SSO session itself intact. To switch accounts, end the session first by opening
-Keycloak's `end_session` endpoint in the browser, so the SSO cookie is cleared for all clients of the realm.
+Note that `prompt=login` re-authenticates the user but leaves the SSO session itself intact. To switch accounts, end the session first with an
+RP-initiated logout (below), so the SSO cookie is cleared for all clients of the realm.
+
+## Logging out
+
+`keycloak.logout()` clears the local tokens and invalidates the refresh token, but cannot reach the SSO cookie living in the browser - the next
+login would skip the credentials form. To end the browser session too, run Keycloak's RP-initiated logout through the same Custom Tab machinery:
+`Keycloak.createLogoutRequest` builds the end-session URL, the redirect receiver catches the way back, and `Keycloak.handleLogoutRedirect`
+validates `state` and clears the local tokens.
+
+The redirect URI can be the same one used for login (it must additionally be listed in the client's **Valid post logout redirect URIs**; the
+default `+` accepts all login redirect URIs). Because the session was obtained with the `openid` scope, the request carries an `id_token_hint` and
+Keycloak logs out without showing a confirmation screen.
+
+```kotlin
+/** The in-flight logout request. Saved state keeps it across process death, like the login request. */
+private var pendingLogout: LogoutRequest? by savedStateHandle.saved { null }
+
+/** Creates and remembers the logout request; open the returned URL in a Custom Tab. */
+suspend fun beginLogout(): Url {
+    val request = keycloak.createLogoutRequest(postLogoutRedirectUri = REDIRECT_URI)
+    pendingLogout = request
+    return request.url
+}
+
+/** Handles a captured redirect - logout takes priority over a pending login. */
+fun onRedirect(redirectedUrl: String) {
+    pendingLogout?.takeIf { it.matchesRedirect(redirectedUrl) }?.let { request ->
+        pendingLogout = null
+        viewModelScope.launch {
+            // Validates state and clears the local tokens; navigation reacts to keycloak.isLoggedIn.
+            keycloak.handleLogoutRedirect(request, redirectedUrl)
+        }
+        return
+    }
+    // ... the login handling shown above
+}
+```
+
+If the user closes the tab before the redirect arrives, the local tokens are still there and the app stays logged in - mirror the login's
+`onReturnedWithoutRedirect` pattern and either keep the session or clear it locally via `keycloak.updateTokens(null)`, depending on whether a
+half-completed logout should count as logged out.
 
 ## Covered edge cases
 

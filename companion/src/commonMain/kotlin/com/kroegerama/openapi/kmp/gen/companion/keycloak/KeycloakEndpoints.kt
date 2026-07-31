@@ -13,8 +13,10 @@ import kotlinx.serialization.Serializable
  * @property authorizationEndpoint the OAuth 2.0 authorization endpoint used by the
  *   Authorization Code + PKCE flow, or `null` if unknown -
  *   [Keycloak.createAuthorizationRequest] then fails.
- * @property logoutEndpoint the end-session endpoint used for refresh-token logout, or `null`
- *   if the server does not expose one - [Keycloak.logout] then only clears the local state.
+ * @property logoutEndpoint the end-session endpoint used for refresh-token logout and
+ *   RP-initiated browser logout, or `null` if the server does not expose one -
+ *   [Keycloak.logout] then only clears the local state, and [Keycloak.createLogoutRequest]
+ *   fails.
  * @property userInfoEndpoint the OpenID Connect userinfo endpoint, or `null` if unknown -
  *   [Keycloak.userInfo] then fails.
  */

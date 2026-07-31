@@ -14,7 +14,8 @@
         "myapp://callback"
       ],
       "attributes": {
-        "pkce.code.challenge.method": "S256"
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "+"
       }
     },
     {

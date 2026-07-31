@@ -13,7 +13,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
 /**
- * Failure while parsing an authorization redirect. Deliberately not a
+ * Failure while parsing an authorization or post-logout redirect. Deliberately not a
  * [com.kroegerama.openapi.kmp.gen.companion.CallException]: no HTTP call is involved.
  */
 public sealed class KeycloakAuthorizationException(
@@ -135,17 +135,8 @@ public data class AuthorizationRequest(
      *   slashes trimmed, so `/callback` and `/callback/` match - reverse proxies and some
      *   identity providers normalize the path this way. Pass `false` for exact matching.
      */
-    public fun matchesRedirect(url: Url, normalizePath: Boolean = true): Boolean {
-        fun path(url: Url): String = if (normalizePath) {
-            url.encodedPath.trimEnd('/')
-        } else {
-            url.encodedPath
-        }
-        return url.protocol.name.equals(parsedRedirectUri.protocol.name, ignoreCase = true) &&
-                url.host.equals(parsedRedirectUri.host, ignoreCase = true) &&
-                url.port == parsedRedirectUri.port &&
-                path(url) == path(parsedRedirectUri)
-    }
+    public fun matchesRedirect(url: Url, normalizePath: Boolean = true): Boolean =
+        redirectTargetMatches(url, parsedRedirectUri, normalizePath)
 
     /**
      * [matchesRedirect] overload for platform APIs that surface the navigation target as a
@@ -158,8 +149,26 @@ public data class AuthorizationRequest(
 }
 
 /**
+ * Whether [target] points back to [redirectUri]: scheme, host, port, and path must match
+ * (query parameters and the fragment are ignored). With [normalizePath], paths are compared
+ * with trailing slashes trimmed.
+ */
+internal fun redirectTargetMatches(target: Url, redirectUri: Url, normalizePath: Boolean): Boolean {
+    fun path(url: Url): String = if (normalizePath) {
+        url.encodedPath.trimEnd('/')
+    } else {
+        url.encodedPath
+    }
+    return target.protocol.name.equals(redirectUri.protocol.name, ignoreCase = true) &&
+            target.host.equals(redirectUri.host, ignoreCase = true) &&
+            target.port == redirectUri.port &&
+            path(target) == path(redirectUri)
+}
+
+/**
  * The [KeycloakAuthorizationException] carried by this failure, or `null` when it did not
- * originate from parsing an authorization redirect ([Keycloak.handleAuthorizationRedirect]).
+ * originate from parsing an authorization or post-logout redirect
+ * ([Keycloak.handleAuthorizationRedirect], [Keycloak.handleLogoutRedirect]).
  *
  * The most common case worth special-casing is the user cancelling the login:
  *

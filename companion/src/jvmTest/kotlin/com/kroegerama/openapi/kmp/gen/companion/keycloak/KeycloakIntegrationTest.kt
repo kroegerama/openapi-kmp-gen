@@ -191,40 +191,8 @@ class KeycloakIntegrationTest {
         val keycloak = publicKeycloak(baseUrl)
         val request = keycloak.createAuthorizationRequest(redirectUri = "http://localhost:8123/callback")
 
-        // Keycloak's login page is a plain HTML form, so a cookie-aware client can play the
-        // browser: fetch the form, post the credentials, and capture the redirect instead of
-        // following it - no real browser or loopback listener needed.
-        // Keycloak marks its cookies Secure even over plain http; browsers send them anyway
-        // because localhost is a secure context, ktor does not - so drop the flag on storage.
-        HttpClient(OkHttp) {
-            install(HttpCookies) {
-                storage = object : CookiesStorage {
-                    private val delegate = AcceptAllCookiesStorage()
-                    override suspend fun get(requestUrl: Url) = delegate.get(requestUrl)
-                    override suspend fun addCookie(requestUrl: Url, cookie: Cookie) =
-                        delegate.addCookie(requestUrl, cookie.copy(secure = false))
-
-                    override fun close() = delegate.close()
-                }
-            }
-            followRedirects = false
-        }.use { browser ->
-            val loginPage = browser.get(request.url)
-            assertEquals(HttpStatusCode.OK, loginPage.status)
-            val formAction = assertNotNull(
-                Regex("""<form[^>]+action="([^"]+)"""").find(loginPage.bodyAsText())?.groupValues?.get(1),
-                "No login form found on the authorization page"
-            ).replace("&amp;", "&")
-
-            val redirect = browser.submitForm(
-                url = formAction,
-                formParameters = parameters {
-                    append("username", USERNAME)
-                    append("password", PASSWORD)
-                }
-            )
-            assertEquals(HttpStatusCode.Found, redirect.status, "Keycloak did not accept the login")
-            val location = assertNotNull(redirect.headers[HttpHeaders.Location])
+        browserClient().use { browser ->
+            val location = browser.loginViaForm(request.url)
             assertTrue(request.matchesRedirect(location))
 
             // The realm forces the S256 challenge method, so a successful exchange also proves
@@ -233,5 +201,86 @@ class KeycloakIntegrationTest {
             assertNotNull(tokens.idToken, "The openid scope should yield an ID token")
             assertEquals(tokens.accessToken, keycloak.currentTokens()?.accessToken)
         }
+    }
+
+    @Test
+    fun headlessBrowserLogoutEndsTheSsoSession() = integrationTest { baseUrl ->
+        val keycloak = publicKeycloak(baseUrl)
+        val authRequest = keycloak.createAuthorizationRequest(redirectUri = "http://localhost:8123/callback")
+
+        browserClient().use { browser ->
+            val tokens = keycloak
+                .handleAuthorizationRedirect(authRequest, browser.loginViaForm(authRequest.url))
+                .expectRight()
+            assertNotNull(tokens.idToken, "The openid scope should yield an ID token")
+
+            // The SSO cookie now authorizes silently: no login form, an immediate redirect.
+            val silent = keycloak.createAuthorizationRequest(redirectUri = "http://localhost:8123/callback")
+            assertEquals(
+                HttpStatusCode.Found, browser.get(silent.url).status,
+                "Expected a silent SSO login before the logout"
+            )
+
+            // The id_token_hint lets Keycloak log out without a confirmation screen and
+            // redirect straight back.
+            val logoutRequest = keycloak.createLogoutRequest(postLogoutRedirectUri = "http://localhost:8123/callback")
+            val response = browser.get(logoutRequest.url)
+            assertEquals(HttpStatusCode.Found, response.status, "Keycloak did not accept the logout request")
+            val location = assertNotNull(response.headers[HttpHeaders.Location])
+            assertTrue(logoutRequest.matchesRedirect(location))
+
+            keycloak.handleLogoutRedirect(logoutRequest, location).expectRight()
+            assertNull(keycloak.currentTokens())
+
+            // With the SSO session gone, the same navigation shows the login form again.
+            val afterLogout = keycloak.createAuthorizationRequest(redirectUri = "http://localhost:8123/callback")
+            assertEquals(
+                HttpStatusCode.OK, browser.get(afterLogout.url).status,
+                "Expected the login form again after the logout"
+            )
+        }
+    }
+
+    /**
+     * A cookie-aware client that can play the browser for Keycloak's plain HTML pages -
+     * no real browser or loopback listener needed. Redirects are captured, not followed.
+     * Keycloak marks its cookies Secure even over plain http; browsers send them anyway
+     * because localhost is a secure context, ktor does not - so drop the flag on storage.
+     */
+    private fun browserClient(): HttpClient = HttpClient(OkHttp) {
+        install(HttpCookies) {
+            storage = object : CookiesStorage {
+                private val delegate = AcceptAllCookiesStorage()
+                override suspend fun get(requestUrl: Url) = delegate.get(requestUrl)
+                override suspend fun addCookie(requestUrl: Url, cookie: Cookie) =
+                    delegate.addCookie(requestUrl, cookie.copy(secure = false))
+
+                override fun close() = delegate.close()
+            }
+        }
+        followRedirects = false
+    }
+
+    /**
+     * Fetches the login form behind [authorizationUrl], posts the test credentials, and
+     * returns the captured redirect location carrying the authorization code.
+     */
+    private suspend fun HttpClient.loginViaForm(authorizationUrl: Url): String {
+        val loginPage = get(authorizationUrl)
+        assertEquals(HttpStatusCode.OK, loginPage.status)
+        val formAction = assertNotNull(
+            Regex("""<form[^>]+action="([^"]+)"""").find(loginPage.bodyAsText())?.groupValues?.get(1),
+            "No login form found on the authorization page"
+        ).replace("&amp;", "&")
+
+        val redirect = submitForm(
+            url = formAction,
+            formParameters = parameters {
+                append("username", USERNAME)
+                append("password", PASSWORD)
+            }
+        )
+        assertEquals(HttpStatusCode.Found, redirect.status, "Keycloak did not accept the login")
+        return assertNotNull(redirect.headers[HttpHeaders.Location])
     }
 }
