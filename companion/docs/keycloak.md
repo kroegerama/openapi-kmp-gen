@@ -15,7 +15,13 @@ so token requests bypass the API's auth plugin.
   token) are renewed by repeating the `client_credentials` request instead
 - Refresh failure semantics: HTTP 400/401 with a Keycloak error body of `invalid_grant` clears the token state (a new login is required;
   client-credentials sessions relogin instead); any other failure - transient errors, a 400/401 without a readable Keycloak error body (reverse
-  proxies, gateways, VPN portals), but also e.g. `invalid_client` - keeps the tokens so a later call can retry
+  proxies, gateways, VPN portals), but also e.g. `invalid_client` - keeps the tokens so a later call can retry. An unreachable server therefore
+  never ends the session on its own
+- Local refresh-token expiry: `bearerOrNull()` checks the refresh token's own expiry (JWT `exp` claim, falling back to
+  `obtainedAt + refresh_expires_in`) *before* sending a refresh request. A locally expired refresh token would deterministically be rejected with
+  `invalid_grant`, so the session ends immediately - `sessionEnded` emits `SessionExpired` without a server round trip. This is the expected
+  outcome when tokens outlive the realm's SSO Session Idle timeout while the app is closed or the server is unreachable: the logout is triggered
+  by the token's expiry, not by the failed connection. The check applies no leeway, so it relies on a reasonably accurate device clock
 - State: observable via `tokens: StateFlow<KeycloakTokens?>` and `isLoggedIn: Flow<Boolean>`; the latter runs the token loader before its first
   emission, so it reflects persisted tokens at startup while `tokens` stays `null` until the loader has run. Persistence is delegated to the app via
   `KeycloakTokenLoader` (runs lazily on first access; a throwing loader is retried on the next access until an explicit login/logout/`updateTokens`
