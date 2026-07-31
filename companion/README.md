@@ -137,7 +137,12 @@ so token requests bypass the API's auth plugin.
 - Session end is signaled via `sessionEnded: SharedFlow<KeycloakSessionEndReason>`, emitted only when a session actually existed:
   `SessionExpired` (refresh token rejected or expired - drive a "you were logged out" notification) vs `Logout` (explicit `logout()` or
   `updateTokens(null)`); events are not replayed, so collect it for the lifetime of the UI
-- `logout()` clears local state (always) and best-effort notifies Keycloak's end-session endpoint using the refresh token
+- `logout()` clears local state (always) and best-effort notifies Keycloak's end-session endpoint using the refresh token. This backchannel call
+  cannot clear an SSO cookie held by the browser - use the RP-initiated browser logout (see below) to end that session too
+- `userInfo()` fetches the end-user's claims from the OIDC userinfo endpoint, authenticated with the current access token (refreshed first when
+  expired). Requires a session obtained with the `openid` scope; the response's `sub` claim is verified against the ID token's. Because the claims
+  come straight from the server, they are trustworthy without local signature validation - unlike the locally parsed `KeycloakTokens.idJwt`.
+  `KeycloakUserInfo` exposes the standard profile claims as typed properties and everything else via `getClaim(name)`
 - Errors use the module's `Either<CallException, T>` model; `CallException.keycloakErrorOrNull()` extracts the Keycloak error body
 
 ```kotlin
@@ -195,6 +200,10 @@ val result = keycloak.handleAuthorizationRedirect(request, capturedRedirectUrl)
 - Custom integrations can use `AuthorizationRequest.matchesRedirect(url)` to decide when a navigation is the redirect (compares scheme, host, port,
   and path; ignores query and fragment; trailing slashes are normalized unless
   `normalizePath = false`)
+- The browser session is ended the same way, via OIDC RP-Initiated Logout: `createLogoutRequest(postLogoutRedirectUri)` builds the end-session URL
+  (with an `id_token_hint` when the session has an ID token, so no confirmation screen is shown; the URI must be listed in the client's
+  "Valid post logout redirect URIs"), the app opens it in the browser and captures the redirect, and `handleLogoutRedirect` validates `state` and
+  clears the local tokens. `LogoutRequest` is `@Serializable` and offers `parseRedirect`/`matchesRedirect` like its login counterpart
 
 Integration tests against a real Keycloak instance (including a headless run of the Authorization Code + PKCE flow)
 live in `src/jvmTest` and are gated on `KEYCLOAK_BASE_URL`; see [`keycloak-testenv/`](keycloak-testenv/README.md) for the Docker setup.
