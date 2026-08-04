@@ -6,7 +6,7 @@
  * Version 1.0.0-SNAPSHOT
  * 
  * Generated Mon, 1 Jun 2026 13:00:00 GMT
- * OpenAPI KMP Gen (version 1.6.0-RC01) by kroegerama
+ * OpenAPI KMP Gen (version 1.6.0-RC03) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
@@ -22,11 +22,21 @@ import com.kroegerama.kmp.gen.generated30.models.NumberTest
 import com.kroegerama.kmp.gen.generated30.models.Photo
 import com.kroegerama.kmp.gen.generated30.models.SerialTest
 import com.kroegerama.openapi.kmp.gen.`companion`.AuthPlugin.Plugin.authKeys
+import com.kroegerama.openapi.kmp.gen.`companion`.Base64Serializer
 import com.kroegerama.openapi.kmp.gen.`companion`.CallException
+import com.kroegerama.openapi.kmp.gen.`companion`.EpochMillisecondsSerializer
+import com.kroegerama.openapi.kmp.gen.`companion`.EpochSecondsSerializer
 import com.kroegerama.openapi.kmp.gen.`companion`.HttpCallResponse
+import com.kroegerama.openapi.kmp.gen.`companion`.ISO8601InstantSerializer
+import com.kroegerama.openapi.kmp.gen.`companion`.SerializableBase64
+import com.kroegerama.openapi.kmp.gen.`companion`.SerializableEpochMilliseconds
+import com.kroegerama.openapi.kmp.gen.`companion`.SerializableEpochSeconds
+import com.kroegerama.openapi.kmp.gen.`companion`.SerializableISO8601Instant
+import com.kroegerama.openapi.kmp.gen.`companion`.appendSerializedHeaderParameter
 import com.kroegerama.openapi.kmp.gen.`companion`.appendSerializedQueryParameter
 import com.kroegerama.openapi.kmp.gen.`companion`.createSerializedPathSegment
 import com.kroegerama.openapi.kmp.gen.`companion`.eitherRequest
+import com.kroegerama.openapi.kmp.gen.`companion`.encodeNullableToJsonElement
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.forms.MultiPartFormDataContent
@@ -46,6 +56,7 @@ import kotlin.collections.List
 import kotlin.collections.Map
 import kotlin.collections.emptyList
 import kotlin.collections.emptyMap
+import kotlinx.serialization.builtins.ListSerializer
 
 public object DefaultApi {
   /**
@@ -63,7 +74,7 @@ public object DefaultApi {
     url.appendPathSegments(
       "refTest",
     )
-    appendSerializedQueryParameter(name = "testParam", value = testParam, explode = true, json = Api.json)
+    appendSerializedQueryParameter(name = "testParam", value = testParam, serializer = ISO8601InstantSerializer, explode = true, json = Api.json)
     setBody(body)
     decorator()
   }
@@ -250,6 +261,74 @@ public object DefaultApi {
       "urlencoded",
     )
     setBody(body)
+    decorator()
+  }
+
+  /**
+   * `GET /serializedParams/{pathInstant}`
+   *
+   * @return OK
+   */
+  public suspend fun serializedParams(
+    xEpochMillis: SerializableEpochMilliseconds? = null,
+    pathInstant: SerializableISO8601Instant,
+    queryInstant: SerializableISO8601Instant? = null,
+    queryEpochSeconds: SerializableEpochSeconds? = null,
+    queryBase64: SerializableBase64? = null,
+    queryInstantList: List<SerializableISO8601Instant>? = null,
+    decorator: HttpRequestBuilder.() -> Unit = {},
+  ): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("GET")
+    url.appendPathSegments(
+      "serializedParams",
+      createSerializedPathSegment(value = pathInstant, serializer = ISO8601InstantSerializer, explode = false, json = Api.json),
+    )
+    appendSerializedHeaderParameter(name = "X-Epoch-Millis", value = xEpochMillis, serializer = EpochMillisecondsSerializer, explode = false, json = Api.json)
+    appendSerializedQueryParameter(name = "queryInstant", value = queryInstant, serializer = ISO8601InstantSerializer, explode = true, json = Api.json)
+    appendSerializedQueryParameter(name = "queryEpochSeconds", value = queryEpochSeconds, serializer = EpochSecondsSerializer, explode = true, json = Api.json)
+    appendSerializedQueryParameter(name = "queryBase64", value = queryBase64, serializer = Base64Serializer, explode = true, json = Api.json)
+    appendSerializedQueryParameter(name = "queryInstantList", value = queryInstantList, serializer = ListSerializer(ISO8601InstantSerializer), explode = true, json = Api.json)
+    decorator()
+  }
+
+  /**
+   * `POST /instantBody`
+   *
+   * @return OK
+   */
+  public suspend fun instantBody(body: SerializableISO8601Instant, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("POST")
+    contentType(ContentType.Application.Json)
+    url.appendPathSegments(
+      "instantBody",
+    )
+    setBody(Api.json.encodeNullableToJsonElement(serializer = ISO8601InstantSerializer, value = body))
+    decorator()
+  }
+
+  /**
+   * `GET /epochSecondsResponse`
+   *
+   * @return OK
+   */
+  public suspend fun epochSecondsResponse(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<SerializableEpochSeconds>> = Api.client.eitherRequest(deserializer = EpochSecondsSerializer, json = Api.json) {
+    method = HttpMethod.parse("GET")
+    url.appendPathSegments(
+      "epochSecondsResponse",
+    )
+    decorator()
+  }
+
+  /**
+   * `GET /instantListResponse`
+   *
+   * @return OK
+   */
+  public suspend fun instantListResponse(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<List<SerializableISO8601Instant>>> = Api.client.eitherRequest(deserializer = ListSerializer(ISO8601InstantSerializer), json = Api.json) {
+    method = HttpMethod.parse("GET")
+    url.appendPathSegments(
+      "instantListResponse",
+    )
     decorator()
   }
 }

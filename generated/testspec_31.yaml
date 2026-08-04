@@ -210,6 +210,83 @@ paths:
       responses:
         200:
           description: OK
+  /serializedParams/{pathInstant}:
+    get:
+      operationId: serializedParams
+      parameters:
+        - in: path
+          name: pathInstant
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: queryInstant
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: queryEpochSeconds
+          schema:
+            type: integer
+            format: epoch-seconds
+        - in: query
+          name: queryBase64
+          schema:
+            type: string
+            format: byte
+        - in: query
+          name: queryInstantList
+          schema:
+            type: array
+            items:
+              type: string
+              format: date-time
+        - in: header
+          name: X-Epoch-Millis
+          schema:
+            type: integer
+            format: epoch-millis
+      responses:
+        200:
+          description: OK
+  /instantBody:
+    post:
+      operationId: instantBody
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+              format: date-time
+      responses:
+        200:
+          description: OK
+  /epochSecondsResponse:
+    get:
+      operationId: epochSecondsResponse
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: epoch-seconds
+  /instantListResponse:
+    get:
+      operationId: instantListResponse
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: date-time
 components:
   securitySchemes:
     TokenAuth:
