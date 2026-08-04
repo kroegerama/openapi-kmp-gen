@@ -255,7 +255,18 @@ class PoetGenerator(
                 }
             )
 
-            beginControlFlow("return %T.client.%M", types.api, PoetMembers.EitherRequest)
+            val responseSerializer = explicitItemSerializer(operation.response.type, operation.response.nullable)
+            if (responseSerializer != null) {
+                beginControlFlow(
+                    "return %T.client.%M(deserializer = %L, json = %T.json)",
+                    types.api,
+                    PoetMembers.EitherRequest,
+                    responseSerializer,
+                    types.api
+                )
+            } else {
+                beginControlFlow("return %T.client.%M", types.api, PoetMembers.EitherRequest)
+            }
 
             addStatement("method = %T.parse(%S)", PoetTypes.HttpMethod, operation.method.name)
 
@@ -293,13 +304,25 @@ class PoetGenerator(
                             val parameter = operation.parameters.first {
                                 it.type == SpecParameter.Type.Path && "{${it.rawName}}" == part
                             }
-                            addStatement(
-                                "%M(value = %L, explode = %L, json = %T.json),",
-                                PoetMembers.CreateSerializedPathSegment,
-                                parameter.name,
-                                parameter.explode,
-                                types.api
-                            )
+                            val serializer = explicitSerializer(parameter.schema)
+                            if (serializer != null) {
+                                addStatement(
+                                    "%M(value = %L, serializer = %L, explode = %L, json = %T.json),",
+                                    PoetMembers.CreateSerializedPathSegment,
+                                    parameter.name,
+                                    serializer,
+                                    parameter.explode,
+                                    types.api
+                                )
+                            } else {
+                                addStatement(
+                                    "%M(value = %L, explode = %L, json = %T.json),",
+                                    PoetMembers.CreateSerializedPathSegment,
+                                    parameter.name,
+                                    parameter.explode,
+                                    types.api
+                                )
+                            }
                         } else {
                             addStatement("%S,", part)
                         }
@@ -316,18 +339,46 @@ class PoetGenerator(
                     SpecParameter.Type.Header -> PoetMembers.AppendSerializedHeaderParameter
                     SpecParameter.Type.Query -> PoetMembers.AppendSerializedQueryParameter
                 }
-                addStatement(
-                    "%M(name = %S, value = %L, explode = %L, json = %T.json)",
-                    appendParameter,
-                    parameter.rawName,
-                    parameter.name,
-                    parameter.explode,
-                    types.api
-                )
+                val serializer = explicitSerializer(parameter.schema)
+                if (serializer != null) {
+                    addStatement(
+                        "%M(name = %S, value = %L, serializer = %L, explode = %L, json = %T.json)",
+                        appendParameter,
+                        parameter.rawName,
+                        parameter.name,
+                        serializer,
+                        parameter.explode,
+                        types.api
+                    )
+                } else {
+                    addStatement(
+                        "%M(name = %S, value = %L, explode = %L, json = %T.json)",
+                        appendParameter,
+                        parameter.rawName,
+                        parameter.name,
+                        parameter.explode,
+                        types.api
+                    )
+                }
             }
 
-            operation.body?.let {
-                addStatement("%M(body)", PoetMembers.RequestSetBody)
+            operation.body?.let { body ->
+                val serializer = if (operation.type == SpecOperation.Type.Default) {
+                    explicitSerializer(body.type)
+                } else {
+                    null
+                }
+                if (serializer != null) {
+                    addStatement(
+                        "%M(%T.json.%M(serializer = %L, value = body))",
+                        PoetMembers.RequestSetBody,
+                        types.api,
+                        PoetMembers.EncodeNullableToJsonElement,
+                        serializer
+                    )
+                } else {
+                    addStatement("%M(body)", PoetMembers.RequestSetBody)
+                }
             }
 
             addStatement("decorator()")
@@ -598,6 +649,66 @@ class PoetGenerator(
                 addAnnotation(deprecated())
             }
         }
+    }
+
+    private val namedSchemas: Map<List<String>, SpecSchema.NamedSpecSchema> = buildMap {
+        fun visit(schema: SpecSchema.NamedSpecSchema) {
+            put(schema.typeNames, schema)
+            when (schema) {
+                is SpecSchema.Object -> schema.children.forEach(::visit)
+                is SpecSchema.Sealed -> schema.children.forEach(::visit)
+                else -> Unit
+            }
+        }
+        specModel.schemas.forEach(::visit)
+    }
+
+    /**
+     * Serializer expression for types whose custom serializer is attached via an annotated
+     * typealias (e.g. `SerializableISO8601Instant`). Reified serializer lookup only sees the
+     * underlying type and would silently fall back to its builtin serializer, so such values
+     * must be serialized with an explicit serializer. Returns null when reified lookup is safe.
+     */
+    private fun explicitSerializer(simpleType: SpecSchema.SimpleType): CodeBlock? = when (simpleType) {
+        is SpecSchema.Primitive -> PoetTypes.explicitSerializerFor(simpleType.type)?.let {
+            CodeBlock.of("%T", it)
+        }
+
+        is SpecSchema.Array -> explicitItemSerializer(simpleType.items, simpleType.itemsNullable)?.let { items ->
+            CodeBlock.of("%M(%L)", PoetMembers.ListSerializer, items)
+        }
+
+        is SpecSchema.Map -> explicitItemSerializer(simpleType.items, simpleType.itemsNullable)?.let { items ->
+            CodeBlock.of(
+                "%M(%T.%M(), %L)",
+                PoetMembers.MapSerializer,
+                STRING,
+                PoetMembers.BuiltinSerializer,
+                items
+            )
+        }
+
+        is SpecSchema.Ref -> (namedSchemas[simpleType.typeNames] as? SpecSchema.Typealias)?.let { alias ->
+            explicitSerializer(alias.schema)
+        }
+
+        else -> null
+    }
+
+    private fun explicitItemSerializer(items: SpecSchema.SimpleType, itemsNullable: Boolean): CodeBlock? {
+        val serializer = explicitSerializer(items) ?: return null
+        return if (itemsNullable || isAliasNullable(items)) {
+            CodeBlock.of("%L.%M", serializer, PoetMembers.NullableSerializer)
+        } else {
+            serializer
+        }
+    }
+
+    private fun isAliasNullable(simpleType: SpecSchema.SimpleType): Boolean {
+        val alias = (simpleType as? SpecSchema.Ref)
+            ?.let { namedSchemas[it.typeNames] as? SpecSchema.Typealias }
+            ?: return false
+        return alias.nullable || isAliasNullable(alias.schema)
     }
 
     private fun convertSimpleType(simpleType: SpecSchema.SimpleType): TypeName = when (simpleType) {

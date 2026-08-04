@@ -1,6 +1,7 @@
 package com.kroegerama.openapi.kmp.gen.poet
 
 import com.kroegerama.openapi.kmp.gen.OptionSet
+import com.kroegerama.openapi.kmp.gen.spec.SpecPrimitiveType
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.MemberName.Companion.member
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
@@ -45,6 +46,34 @@ class PoetTypes(
         val SerializableBase64 = ClassName(COMPANION_PACKAGE, "SerializableBase64")
         val SerializableEpochSeconds = ClassName(COMPANION_PACKAGE, "SerializableEpochSeconds")
         val SerializableEpochMilliseconds = ClassName(COMPANION_PACKAGE, "SerializableEpochMilliseconds")
+        val ISO8601InstantSerializer = ClassName(COMPANION_PACKAGE, "ISO8601InstantSerializer")
+        val Base64Serializer = ClassName(COMPANION_PACKAGE, "Base64Serializer")
+        val EpochSecondsSerializer = ClassName(COMPANION_PACKAGE, "EpochSecondsSerializer")
+        val EpochMillisecondsSerializer = ClassName(COMPANION_PACKAGE, "EpochMillisecondsSerializer")
+
+        /**
+         * The custom serializer of the annotated typealias a primitive type maps to, or null for
+         * types generated with their builtin serializer. Values of these types must be serialized
+         * explicitly: reified serializer lookup only sees the underlying type and would silently
+         * fall back to its builtin serializer.
+         */
+        fun explicitSerializerFor(type: SpecPrimitiveType): ClassName? = when (type) {
+            SpecPrimitiveType.DateTime -> ISO8601InstantSerializer
+            SpecPrimitiveType.Base64 -> Base64Serializer
+            SpecPrimitiveType.EpochSeconds -> EpochSecondsSerializer
+            SpecPrimitiveType.EpochMilliseconds -> EpochMillisecondsSerializer
+
+            SpecPrimitiveType.Boolean,
+            SpecPrimitiveType.Int32,
+            SpecPrimitiveType.Int64,
+            SpecPrimitiveType.Float,
+            SpecPrimitiveType.Double,
+            SpecPrimitiveType.String,
+            SpecPrimitiveType.Date,
+            SpecPrimitiveType.Time,
+            SpecPrimitiveType.Duration,
+            SpecPrimitiveType.UUID -> null
+        }
 
         private val CALL_EXCEPTION = ClassName(COMPANION_PACKAGE, "CallException")
         private val CALL_RESPONSE = ClassName(COMPANION_PACKAGE, "HttpCallResponse")
@@ -74,6 +103,12 @@ class PoetTypes(
 object PoetMembers {
     private const val KTOR_HTTP_PACKAGE = "io.ktor.http"
     private const val KTOR_CLIENT_REQUEST_PACKAGE = "io.ktor.client.request"
+    private const val KTX_SERIALIZATION_BUILTINS = "kotlinx.serialization.builtins"
+    val ListSerializer = MemberName(KTX_SERIALIZATION_BUILTINS, "ListSerializer")
+    val MapSerializer = MemberName(KTX_SERIALIZATION_BUILTINS, "MapSerializer")
+    val BuiltinSerializer = MemberName(KTX_SERIALIZATION_BUILTINS, "serializer")
+    val NullableSerializer = MemberName(KTX_SERIALIZATION_BUILTINS, "nullable")
+    val EncodeNullableToJsonElement = MemberName(COMPANION_PACKAGE, "encodeNullableToJsonElement")
     val EitherRequest = MemberName(COMPANION_PACKAGE, "eitherRequest")
     val AppendSerializedQueryParameter = MemberName(COMPANION_PACKAGE, "appendSerializedQueryParameter")
     val AppendSerializedHeaderParameter = MemberName(COMPANION_PACKAGE, "appendSerializedHeaderParameter")
