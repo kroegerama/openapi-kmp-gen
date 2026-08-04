@@ -5,6 +5,7 @@ import io.ktor.client.request.cookie
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.http.appendPathSegments
+import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -109,6 +110,28 @@ public inline fun <reified T> HttpRequestBuilder.appendSerializedPathSegment(
     url.appendPathSegments(content)
 }
 
+/**
+ * Variant of [appendSerializedPathSegment] with an explicit [serializer].
+ *
+ * The reified variants resolve the serializer from the reified type, which drops
+ * `@Serializable(with = …)` type annotations carried by typealiases such as
+ * [SerializableISO8601Instant]. Use this overload to keep the custom serializer:
+ *
+ * ```kotlin
+ * appendSerializedPathSegment(value = instant, serializer = ISO8601InstantSerializer)
+ * ```
+ */
+public fun <T : Any> HttpRequestBuilder.appendSerializedPathSegment(
+    value: T?,
+    serializer: SerializationStrategy<T>,
+    explode: Boolean = false,
+    json: Json = Json
+) {
+    if (value == null) return
+    val content = serializeSimple(json.encodeToJsonElement(serializer, value), explode) ?: return
+    url.appendPathSegments(content)
+}
+
 public inline fun <reified T> createSerializedPathSegment(
     value: T,
     explode: Boolean = false,
@@ -116,6 +139,20 @@ public inline fun <reified T> createSerializedPathSegment(
 ): String {
     if (value == null) return ""
     return serializeSimple(json.encodeToJsonElement(value), explode).orEmpty()
+}
+
+/**
+ * Variant of [createSerializedPathSegment] with an explicit [serializer], preserving custom
+ * serializers of annotated typealiases such as [SerializableISO8601Instant].
+ */
+public fun <T : Any> createSerializedPathSegment(
+    value: T?,
+    serializer: SerializationStrategy<T>,
+    explode: Boolean = false,
+    json: Json = Json
+): String {
+    if (value == null) return ""
+    return serializeSimple(json.encodeToJsonElement(serializer, value), explode).orEmpty()
 }
 
 public inline fun <reified T> HttpRequestBuilder.appendSerializedQueryParameter(
@@ -126,6 +163,23 @@ public inline fun <reified T> HttpRequestBuilder.appendSerializedQueryParameter(
 ) {
     if (value == null) return
     serializeForm(name, json.encodeToJsonElement(value), explode) { key, content ->
+        parameter(key, content)
+    }
+}
+
+/**
+ * Variant of [appendSerializedQueryParameter] with an explicit [serializer], preserving custom
+ * serializers of annotated typealiases such as [SerializableISO8601Instant].
+ */
+public fun <T : Any> HttpRequestBuilder.appendSerializedQueryParameter(
+    name: String,
+    value: T?,
+    serializer: SerializationStrategy<T>,
+    explode: Boolean = true,
+    json: Json = Json
+) {
+    if (value == null) return
+    serializeForm(name, json.encodeToJsonElement(serializer, value), explode) { key, content ->
         parameter(key, content)
     }
 }
@@ -141,6 +195,22 @@ public inline fun <reified T> HttpRequestBuilder.appendSerializedHeaderParameter
     header(name, content)
 }
 
+/**
+ * Variant of [appendSerializedHeaderParameter] with an explicit [serializer], preserving custom
+ * serializers of annotated typealiases such as [SerializableISO8601Instant].
+ */
+public fun <T : Any> HttpRequestBuilder.appendSerializedHeaderParameter(
+    name: String,
+    value: T?,
+    serializer: SerializationStrategy<T>,
+    explode: Boolean = false,
+    json: Json = Json
+) {
+    if (value == null) return
+    val content = serializeSimple(json.encodeToJsonElement(serializer, value), explode) ?: return
+    header(name, content)
+}
+
 public inline fun <reified T> HttpRequestBuilder.appendSerializedCookieParameter(
     name: String,
     value: T,
@@ -151,4 +221,36 @@ public inline fun <reified T> HttpRequestBuilder.appendSerializedCookieParameter
     serializeForm(name, json.encodeToJsonElement(value), explode) { key, content ->
         if (content != null) cookie(key, content)
     }
+}
+
+/**
+ * Variant of [appendSerializedCookieParameter] with an explicit [serializer], preserving custom
+ * serializers of annotated typealiases such as [SerializableISO8601Instant].
+ */
+public fun <T : Any> HttpRequestBuilder.appendSerializedCookieParameter(
+    name: String,
+    value: T?,
+    serializer: SerializationStrategy<T>,
+    explode: Boolean = true,
+    json: Json = Json
+) {
+    if (value == null) return
+    serializeForm(name, json.encodeToJsonElement(serializer, value), explode) { key, content ->
+        if (content != null) cookie(key, content)
+    }
+}
+
+/**
+ * Encodes [value] with an explicit [serializer], returning [JsonNull] for `null` values.
+ *
+ * Intended for request bodies whose type is an annotated typealias such as
+ * [SerializableISO8601Instant]: passing such a value to `setBody` directly would resolve the
+ * serializer from the underlying type and drop the `@Serializable(with = …)` annotation.
+ */
+public fun <T : Any> Json.encodeNullableToJsonElement(
+    serializer: SerializationStrategy<T>,
+    value: T?
+): JsonElement {
+    if (value == null) return JsonNull
+    return encodeToJsonElement(serializer, value)
 }

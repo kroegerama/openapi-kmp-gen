@@ -97,6 +97,12 @@ Parameter serialization helpers for generated service methods:
 - `appendSerializedHeaderParameter`
 - `appendSerializedCookieParameter`
 
+Each helper has a reified variant and an overload taking an explicit `serializer`. The explicit
+overload is required for the annotated type aliases above: reified serializer lookup only sees the
+underlying type (`Instant`, `ByteArray`) and would fall back to its builtin serializer.
+`encodeNullableToJsonElement` covers the same case for request bodies, and the `eitherRequest`
+overload with an explicit `deserializer` covers response bodies.
+
 ### `FormDataContent`
 
 Extension functions to convert any `@Serializable` object to:
