@@ -11,6 +11,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
 import io.ktor.http.Url
 import io.ktor.http.parseQueryString
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -848,6 +849,35 @@ class KeycloakTest {
 
         assertTrue(result.isLeft())
         assertNull(keycloak.tokens.value)
+    }
+
+    @Test
+    fun logoutRequestSurvivesCallerCancellation() = runTest {
+        val requestReceived = CompletableDeferred<Unit>()
+        val releaseResponse = CompletableDeferred<Unit>()
+        var handlerCompleted = false
+        val engine = MockEngine {
+            requestReceived.complete(Unit)
+            // Suspends until the test cancelled the calling job, so a cancellable request
+            // would be torn down right here instead of reaching the respond call.
+            releaseResponse.await()
+            handlerCompleted = true
+            respondJson("", HttpStatusCode.NoContent)
+        }
+        val keycloak = createKeycloak(engine)
+        keycloak.updateTokens(validTokens(refreshToken = "refresh-to-revoke"))
+
+        // Simulates an observer of the cleared state tearing down the calling scope
+        // (e.g. navigation to a login screen) while the logout request is in flight.
+        val job = launch { keycloak.logout() }
+        requestReceived.await()
+        job.cancel()
+        releaseResponse.complete(Unit)
+        job.join()
+
+        assertTrue(handlerCompleted)
+        assertNull(keycloak.tokens.value)
+        assertEquals("refresh-to-revoke", engine.formBody()["refresh_token"])
     }
 
     @Test

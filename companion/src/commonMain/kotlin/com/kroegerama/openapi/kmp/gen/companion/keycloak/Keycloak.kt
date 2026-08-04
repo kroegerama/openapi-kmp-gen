@@ -32,6 +32,7 @@ import io.ktor.http.parameters
 import io.ktor.http.takeFrom
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.util.generateNonceSuspend
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -47,6 +48,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -324,6 +326,11 @@ public class Keycloak(
      * The local state is cleared even when the server call fails. Without a refresh token or
      * a configured logout endpoint, no request is sent.
      *
+     * The state is cleared - and [tokens], [isLoggedIn], and [sessionEnded] emit - before the
+     * request is sent. The request runs in a [NonCancellable] context (bounded by the
+     * [httpClient]'s timeouts), so an observer of those emissions tearing down the calling
+     * scope - e.g. by navigating to a login screen - cannot cancel the revocation mid-flight.
+     *
      * This backchannel call cannot reach an SSO session held in browser cookies: after a
      * login via [createAuthorizationRequest], the next authorization request may log the
      * user back in without credentials. Use [createLogoutRequest] to also end the browser
@@ -336,14 +343,16 @@ public class Keycloak(
         clear(KeycloakSessionEndReason.Logout)
         val logoutEndpoint = endpoints.logoutEndpoint
         if (refreshToken == null || logoutEndpoint == null) return Unit.right()
-        httpClient.eitherRequest<Unit> {
-            method = HttpMethod.Post
-            url.takeFrom(logoutEndpoint)
-            setBody(FormDataContent(parameters {
-                appendClient()
-                append("refresh_token", refreshToken)
-            }))
-        }.map { }
+        withContext(NonCancellable) {
+            httpClient.eitherRequest<Unit> {
+                method = HttpMethod.Post
+                url.takeFrom(logoutEndpoint)
+                setBody(FormDataContent(parameters {
+                    appendClient()
+                    append("refresh_token", refreshToken)
+                }))
+            }.map { }
+        }
     }
 
     /** The current token set, running the [KeycloakTokenLoader] first if it has not run yet. */

@@ -31,7 +31,9 @@ so token requests bypass the API's auth plugin.
 - Session end is signaled via `sessionEnded: SharedFlow<KeycloakSessionEndReason>`, emitted only when a session actually existed:
   `SessionExpired` (refresh token rejected or expired - drive a "you were logged out" notification) vs `Logout` (explicit `logout()` or
   `updateTokens(null)`); events are not replayed, so collect it for the lifetime of the UI
-- `logout()` clears local state (always) and best-effort notifies Keycloak's end-session endpoint using the refresh token. This backchannel call
+- `logout()` clears local state (always) and best-effort notifies Keycloak's end-session endpoint using the refresh token. The state clears before
+  the request is sent; the request runs `NonCancellable` (bounded by the client's timeouts), so an observer of the cleared state tearing down the
+  calling scope - e.g. by navigating to a login screen - cannot cancel the token revocation mid-flight. This backchannel call
   cannot clear an SSO cookie held by the browser - use the RP-initiated browser logout (see below) to end that session too
 - `userInfo()` fetches the end-user's claims from the OIDC userinfo endpoint, authenticated with the current access token (refreshed first when
   expired). Requires a session obtained with the `openid` scope; the response's `sub` claim is verified against the ID token's. Because the claims
