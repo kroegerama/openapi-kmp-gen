@@ -46,7 +46,7 @@ class CallResponseTest {
 
     private fun nonHttpExceptions(): List<CallException> = listOf(
         IOCallException(null, IOException("io")),
-        CallSerializationException(null, ContentConvertException("convert")),
+        SerializationCallException(null, ContentConvertException("convert")),
         UnexpectedCallException(null, null)
     )
 

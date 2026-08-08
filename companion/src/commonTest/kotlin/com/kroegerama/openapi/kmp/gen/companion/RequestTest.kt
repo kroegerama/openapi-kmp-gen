@@ -84,7 +84,7 @@ class RequestTest {
             respond("""{"wrong":true}""", HttpStatusCode.OK, jsonContentType)
         }
         val result = client.eitherRequest<Dto> { url("https://example.com/dto") }
-        assertTrue(result.leftOrNull() is CallSerializationException, result.toString())
+        assertTrue(result.leftOrNull() is SerializationCallException, result.toString())
     }
 
     @Test

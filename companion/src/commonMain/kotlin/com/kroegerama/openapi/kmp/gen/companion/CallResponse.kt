@@ -30,7 +30,7 @@ public fun Throwable.asCallException(): CallException {
             cause = this
         )
 
-        is ContentConvertException -> CallSerializationException(
+        is ContentConvertException -> SerializationCallException(
             message = message,
             cause = this
         )
@@ -58,7 +58,7 @@ public suspend inline fun <T, reified E> EitherCallResponse<T>.typed(): EitherTy
             }
 
             is IOCallException -> callException
-            is CallSerializationException -> callException
+            is SerializationCallException -> callException
             is UnexpectedCallException -> callException
         }
     }
@@ -99,7 +99,14 @@ public data class HttpCallException(
     val headers: Headers = raw.headers
 }
 
-public data class CallSerializationException(
+@Deprecated(
+    message = "renamed to SerializationCallException",
+    replaceWith = ReplaceWith("com.kroegerama.openapi.kmp.gen.companion.SerializationCallException"),
+    level = DeprecationLevel.ERROR
+)
+public typealias CallSerializationException = SerializationCallException
+
+public data class SerializationCallException(
     override val message: String?,
     override val cause: ContentConvertException
 ) : CallException()
@@ -123,7 +130,7 @@ public inline fun TypedCallException<*>.onResponse(
     when (this) {
         is TypedHttpCallException<*> -> raw
         is HttpCallException -> raw
-        is CallSerializationException -> return
+        is SerializationCallException -> return
         is IOCallException -> return
         is UnexpectedCallException -> return
     }.let(block)
@@ -138,7 +145,7 @@ public inline fun TypedCallException<*>.onCode(
     when (this) {
         is TypedHttpCallException<*> -> code
         is HttpCallException -> code
-        is CallSerializationException -> return
+        is SerializationCallException -> return
         is IOCallException -> return
         is UnexpectedCallException -> return
     }.let(block)
