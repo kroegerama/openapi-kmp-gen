@@ -21,7 +21,7 @@ swagger-parser = "2.1.46"
 gradle-publish = "2.1.1"
 slf4f = "2.0.18"
 logback-android = "3.0.0"
-logback-classic = "1.6.2"
+logback-classic = "1.6.3"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
