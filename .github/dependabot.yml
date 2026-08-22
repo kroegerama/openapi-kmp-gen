@@ -4,7 +4,14 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 3
+      exclude:
+        - "androidx.*"
+        - "com.android*"
+        - "com.google*"
+        - "com.kroegerama*"
+        - "org.jetbrains*"
     groups:
       kotlin:
         patterns:
