@@ -10,8 +10,8 @@ plugins {
 kotlin {
     compilerOptions {
         moduleName = "kmp.gen.gradle-plugin"
-        jvmTarget = JvmTarget.JVM_11
-        freeCompilerArgs.add("-Xjdk-release=11")
+        jvmTarget = JvmTarget.JVM_17
+        freeCompilerArgs.add("-Xjdk-release=17")
         apiVersion = KotlinVersion.KOTLIN_2_2
         languageVersion = KotlinVersion.KOTLIN_2_2
     }
@@ -19,7 +19,7 @@ kotlin {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.release = 11
+    options.release = 17
 }
 
 tasks.validatePlugins {
