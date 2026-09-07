@@ -270,15 +270,6 @@ class PoetGenerator(
 
             addStatement("method = %T.parse(%S)", PoetTypes.HttpMethod, operation.method.name)
 
-            if (operation.body != null) {
-                when (operation.type) {
-                    SpecOperation.Type.Default -> addStatement("%M(%T)", PoetMembers.ContentType, PoetTypes.ContentTypeApplicationJson)
-                    SpecOperation.Type.Multipart -> Unit // content type is added automatically by ktor
-                    SpecOperation.Type.UrlEncoded -> Unit // content type is added automatically by ktor
-                    SpecOperation.Type.Unknown -> Unit
-                }
-            }
-
             if (operation.securityIds.isNotEmpty()) {
                 val authKeysCodeBlock = buildCodeBlock {
                     addStatement("%M(", PoetMembers.AuthKeys)
@@ -363,26 +354,49 @@ class PoetGenerator(
             }
 
             operation.body?.let { body ->
-                val serializer = if (operation.type == SpecOperation.Type.Default) {
-                    explicitSerializer(body.type)
-                } else {
-                    null
+                // an omitted optional body sends neither content type nor payload
+                if (!body.required) {
+                    beginControlFlow("if (body != null)")
                 }
-                if (serializer != null) {
-                    addStatement(
-                        "%M(%T.json.%M(serializer = %L, value = body))",
-                        PoetMembers.RequestSetBody,
-                        types.api,
-                        PoetMembers.EncodeNullableToJsonElement,
-                        serializer
-                    )
-                } else {
-                    addStatement("%M(body)", PoetMembers.RequestSetBody)
+                addBodyStatements(operation, body)
+                if (!body.required) {
+                    endControlFlow()
                 }
             }
 
             addStatement("decorator()")
             endControlFlow()
+        }
+    }
+
+    private fun FunSpec.Builder.addBodyStatements(operation: SpecOperation, body: SpecOperation.SchemaInfo) {
+        when (operation.type) {
+            SpecOperation.Type.Default -> addStatement("%M(%T)", PoetMembers.ContentType, PoetTypes.ContentTypeApplicationJson)
+            SpecOperation.Type.Multipart -> Unit // content type is added automatically by ktor
+            SpecOperation.Type.UrlEncoded -> Unit // content type is added automatically by ktor
+            SpecOperation.Type.Unknown -> Unit
+        }
+        val serializer = if (operation.type == SpecOperation.Type.Default) {
+            explicitSerializer(body.type)
+        } else {
+            null
+        }
+        when {
+            serializer == null -> addStatement("%M(body)", PoetMembers.RequestSetBody)
+            // a required nullable body sends a JSON null
+            body.nullable -> addStatement(
+                "%M(%T.json.%M(serializer = %L, value = body))",
+                PoetMembers.RequestSetBody,
+                types.api,
+                PoetMembers.EncodeNullableToJsonElement,
+                serializer
+            )
+            else -> addStatement(
+                "%M(%T.json.encodeToJsonElement(serializer = %L, value = body))",
+                PoetMembers.RequestSetBody,
+                types.api,
+                serializer
+            )
         }
     }
 
@@ -401,7 +415,7 @@ class PoetGenerator(
 
     private fun ParameterSpec.Builder.handleSchemaInfo(info: SpecOperation.SchemaInfo) {
         when {
-            info.nullable -> defaultValue("null")
+            info.acceptsNull -> defaultValue("null")
             info.type is SpecSchema.Array -> defaultValue("%M()", PoetMembers.EmptyList)
             info.type is SpecSchema.Map -> defaultValue("%M()", PoetMembers.EmptyMap)
         }
@@ -411,25 +425,25 @@ class PoetGenerator(
     }
 
     private fun createMultipartBodyParameter(info: SpecOperation.SchemaInfo): ParameterSpec {
-        return poetParameter("body", PoetTypes.MultiPartFormDataContent.nullable(info.nullable)) {
+        return poetParameter("body", PoetTypes.MultiPartFormDataContent.nullable(info.acceptsNull)) {
             handleSchemaInfo(info)
         }
     }
 
     private fun createUrlEncodedBodyParameter(info: SpecOperation.SchemaInfo): ParameterSpec {
-        return poetParameter("body", PoetTypes.FormDataContent.nullable(info.nullable)) {
+        return poetParameter("body", PoetTypes.FormDataContent.nullable(info.acceptsNull)) {
             handleSchemaInfo(info)
         }
     }
 
     private fun createAnyBodyParameter(info: SpecOperation.SchemaInfo): ParameterSpec {
-        return poetParameter("body", ANY.nullable(info.nullable)) {
+        return poetParameter("body", ANY.nullable(info.acceptsNull)) {
             handleSchemaInfo(info)
         }
     }
 
     private fun createBodyParameter(info: SpecOperation.SchemaInfo): ParameterSpec {
-        return poetParameter("body", convertSimpleType(info.type).nullable(info.nullable)) {
+        return poetParameter("body", convertSimpleType(info.type).nullable(info.acceptsNull)) {
             handleSchemaInfo(info)
         }
     }

@@ -231,7 +231,8 @@ class SpecConverter(
             } else {
                 SpecOperation.SchemaInfo(
                     type = resolveSchema(schema),
-                    nullable = requestBody.required != true || schema.isNullable(spec, null),
+                    required = requestBody.required == true,
+                    nullable = schema.isNullable(spec, null),
                     description = requestBody.description
                 )
             }
@@ -265,6 +266,7 @@ class SpecConverter(
                 }
                 SpecOperation.SchemaInfo(
                     type = type,
+                    required = true,
                     // Raw maps to the plain http response, which can never be null
                     nullable = type != SpecSchema.Raw && schema != null && schema.isNullable(spec, null),
                     description = description
@@ -272,12 +274,14 @@ class SpecConverter(
             } else {
                 SpecOperation.SchemaInfo(
                     type = SpecSchema.Unit,
+                    required = true,
                     nullable = false,
                     description = description
                 )
             }
         } ?: SpecOperation.SchemaInfo(
             type = SpecSchema.Unit,
+            required = true,
             nullable = false,
             description = null
         )

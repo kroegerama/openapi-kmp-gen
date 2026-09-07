@@ -48,11 +48,21 @@ data class SpecOperation(
         Unknown
     }
 
+    /**
+     * Schema of a request or response body.
+     *
+     * @param required whether a request body must be sent. A non-required body may be omitted entirely. Always true for responses.
+     * @param nullable whether the schema itself allows a JSON null value
+     */
     data class SchemaInfo(
         val type: SpecSchema.SimpleType,
+        val required: Boolean,
         val nullable: Boolean,
         val description: String?
-    )
+    ) {
+        /** True when the generated Kotlin parameter has to accept null, either for an omitted body or a JSON null. */
+        val acceptsNull: Boolean get() = !required || nullable
+    }
 }
 
 data class SpecParameter(
