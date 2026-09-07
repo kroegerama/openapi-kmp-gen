@@ -6,7 +6,7 @@
  * Version 1.0.0-SNAPSHOT
  * 
  * Generated Mon, 1 Jun 2026 13:00:00 GMT
- * OpenAPI KMP Gen (version 1.6.0-RC03) by kroegerama
+ * OpenAPI KMP Gen (version 1.6.0-RC04) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
@@ -36,7 +36,6 @@ import com.kroegerama.openapi.kmp.gen.`companion`.appendSerializedHeaderParamete
 import com.kroegerama.openapi.kmp.gen.`companion`.appendSerializedQueryParameter
 import com.kroegerama.openapi.kmp.gen.`companion`.createSerializedPathSegment
 import com.kroegerama.openapi.kmp.gen.`companion`.eitherRequest
-import com.kroegerama.openapi.kmp.gen.`companion`.encodeNullableToJsonElement
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.forms.MultiPartFormDataContent
@@ -70,11 +69,11 @@ public object DefaultApi {
     decorator: HttpRequestBuilder.() -> Unit = {},
   ): Either<CallException, HttpCallResponse<Photo>> = Api.client.eitherRequest {
     method = HttpMethod.parse("POST")
-    contentType(ContentType.Application.Json)
     url.appendPathSegments(
       "refTest",
     )
     appendSerializedQueryParameter(name = "testParam", value = testParam, serializer = ISO8601InstantSerializer, explode = true, json = Api.json)
+    contentType(ContentType.Application.Json)
     setBody(body)
     decorator()
   }
@@ -184,10 +183,10 @@ public object DefaultApi {
    */
   public suspend fun nullableBody(body: Photo? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
     method = HttpMethod.parse("POST")
-    contentType(ContentType.Application.Json)
     url.appendPathSegments(
       "nullableBody",
     )
+    contentType(ContentType.Application.Json)
     setBody(body)
     decorator()
   }
@@ -199,10 +198,10 @@ public object DefaultApi {
    */
   public suspend fun listBody(body: List<Long> = emptyList(), decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
     method = HttpMethod.parse("POST")
-    contentType(ContentType.Application.Json)
     url.appendPathSegments(
       "listBody",
     )
+    contentType(ContentType.Application.Json)
     setBody(body)
     decorator()
   }
@@ -214,10 +213,10 @@ public object DefaultApi {
    */
   public suspend fun mapBody(body: Map<String, Long> = emptyMap(), decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
     method = HttpMethod.parse("POST")
-    contentType(ContentType.Application.Json)
     url.appendPathSegments(
       "mapBody",
     )
+    contentType(ContentType.Application.Json)
     setBody(body)
     decorator()
   }
@@ -238,7 +237,9 @@ public object DefaultApi {
     url.appendPathSegments(
       "multipart",
     )
-    setBody(body)
+    if (body != null) {
+      setBody(body)
+    }
     decorator()
   }
 
@@ -260,7 +261,9 @@ public object DefaultApi {
     url.appendPathSegments(
       "urlencoded",
     )
-    setBody(body)
+    if (body != null) {
+      setBody(body)
+    }
     decorator()
   }
 
@@ -298,11 +301,45 @@ public object DefaultApi {
    */
   public suspend fun instantBody(body: SerializableISO8601Instant, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
     method = HttpMethod.parse("POST")
-    contentType(ContentType.Application.Json)
     url.appendPathSegments(
       "instantBody",
     )
-    setBody(Api.json.encodeNullableToJsonElement(serializer = ISO8601InstantSerializer, value = body))
+    contentType(ContentType.Application.Json)
+    setBody(Api.json.encodeToJsonElement(serializer = ISO8601InstantSerializer, value = body))
+    decorator()
+  }
+
+  /**
+   * `POST /optionalBody`
+   *
+   * @return optional body -> nullable parameter, null sends no body
+   */
+  public suspend fun optionalBody(body: Photo? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("POST")
+    url.appendPathSegments(
+      "optionalBody",
+    )
+    if (body != null) {
+      contentType(ContentType.Application.Json)
+      setBody(body)
+    }
+    decorator()
+  }
+
+  /**
+   * `POST /optionalInstantBody`
+   *
+   * @return optional body with explicit serializer -> nullable parameter, null sends no body
+   */
+  public suspend fun optionalInstantBody(body: SerializableISO8601Instant? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("POST")
+    url.appendPathSegments(
+      "optionalInstantBody",
+    )
+    if (body != null) {
+      contentType(ContentType.Application.Json)
+      setBody(Api.json.encodeToJsonElement(serializer = ISO8601InstantSerializer, value = body))
+    }
     decorator()
   }
 

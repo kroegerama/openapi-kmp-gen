@@ -263,6 +263,30 @@ paths:
       responses:
         200:
           description: OK
+  /optionalBody:
+    post:
+      operationId: optionalBody
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Photo'
+      responses:
+        204:
+          description: optional body -> nullable parameter, null sends no body
+  /optionalInstantBody:
+    post:
+      operationId: optionalInstantBody
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: string
+              format: date-time
+      responses:
+        204:
+          description: optional body with explicit serializer -> nullable parameter, null sends no body
   /epochSecondsResponse:
     get:
       operationId: epochSecondsResponse
