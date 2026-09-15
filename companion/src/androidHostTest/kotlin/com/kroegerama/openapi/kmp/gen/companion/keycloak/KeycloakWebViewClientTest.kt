@@ -5,14 +5,12 @@ import android.webkit.WebResourceRequest
 import io.ktor.http.Url
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class KeycloakWebViewClientTest {
 
     private val request = AuthorizationRequest(

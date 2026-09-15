@@ -109,6 +109,13 @@ dependencies {
     coreLibraryDesugaring(libs.desugar)
 }
 
+tasks.withType<Test>().configureEach {
+    if (name == "testAndroidHostTest") {
+        // Robolectric's FileDescriptor interceptor reflects into jdk.internal.access on SDK 36+.
+        jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED")
+    }
+}
+
 mavenPublishing {
     coordinates(
         artifactId = name
