@@ -123,6 +123,26 @@ class CallResponseTest {
     }
 
     @Test
+    fun asThrowableReturnsSelfForCallExceptions() = runTest {
+        val raw = mockResponse(HttpStatusCode.NotFound)
+        val exceptions = nonHttpExceptions() + HttpCallException(raw = raw, cause = null)
+        exceptions.forEach { exception ->
+            assertSame(exception, exception.asThrowable())
+        }
+    }
+
+    @Test
+    fun asThrowableUnwrapsTypedHttpCallException() = runTest {
+        val raw = mockResponse(HttpStatusCode.NotFound)
+        val cause = HttpCallException(raw = raw, cause = null)
+        assertSame(cause, TypedHttpCallException(error = "err", raw = raw, cause = cause).asThrowable())
+
+        val fallback = TypedHttpCallException(error = "err", raw = raw, cause = null).asThrowable()
+        assertTrue(fallback is HttpCallException, fallback.toString())
+        assertSame(raw, fallback.raw)
+    }
+
+    @Test
     fun typedPassesThroughNonHttpExceptions() = runTest {
         nonHttpExceptions().forEach { exception ->
             val either: EitherCallResponse<Dto> = exception.left()

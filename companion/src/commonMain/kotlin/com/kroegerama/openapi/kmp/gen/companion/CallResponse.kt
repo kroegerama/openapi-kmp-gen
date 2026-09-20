@@ -35,9 +35,15 @@ public fun Throwable.asCallException(): CallException {
             cause = this
         )
 
-        is IOException -> IOCallException(null, this)
+        is IOException -> IOCallException(
+            message = message,
+            cause = this
+        )
 
-        else -> UnexpectedCallException(null, this)
+        else -> UnexpectedCallException(
+            message = message,
+            cause = this
+        )
     }
 }
 
@@ -87,6 +93,7 @@ public data class TypedHttpCallException<out E>(
     val cause: CallException?
 ) : TypedCallException<E> {
     val code: Int = raw.status.value
+    val message: String = raw.status.description
     val headers: Headers = raw.headers
 }
 
@@ -120,6 +127,13 @@ public data class UnexpectedCallException(
     override val message: String?,
     override val cause: Throwable?
 ) : CallException()
+
+public fun TypedCallException<*>.asThrowable(): CallException {
+    return when (this) {
+        is TypedHttpCallException<*> -> cause ?: raw.asCallException()
+        is CallException -> this
+    }
+}
 
 public inline fun TypedCallException<*>.onResponse(
     block: (HttpResponse) -> Unit
