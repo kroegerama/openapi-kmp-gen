@@ -149,6 +149,61 @@ paths:
       responses:
         200:
           description: OK
+  /hybridBody:
+    post:
+      operationId: hybridBody
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ id ]
+              properties:
+                id:
+                  type: integer
+              additionalProperties:
+                type: string
+      responses:
+        200:
+          description: inline hybrid body and response -> hoisted classes with a bucket property
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                additionalProperties: true
+  /hybridList:
+    get:
+      operationId: hybridList
+      responses:
+        200:
+          description: list of hybrids -> reified list serializer goes through the class serializer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TypedHybrid'
+  /freeFormBody:
+    post:
+      operationId: freeFormBody
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        200:
+          description: free-form body and response -> JsonObject
+          content:
+            application/json:
+              schema:
+                additionalProperties: { }
   /multipart:
     servers:
       - url: https://example.com
@@ -651,3 +706,249 @@ components:
       properties:
         auditId:
           type: string
+    # additionalProperties: standalone maps
+    FreeFormMap:
+      type: object
+      additionalProperties: true
+      description: additionalProperties true -> JsonObject typealias
+    EmptySchemaMap:
+      additionalProperties: { }
+      description: empty value schema -> JsonObject typealias
+    NullableFreeFormMap:
+      additionalProperties:
+        type: object
+        nullable: true
+      description: nullable empty value schema -> JsonObject typealias
+    ClosedObject:
+      type: object
+      properties:
+        id:
+          type: integer
+      additionalProperties: false
+      description: additionalProperties false -> plain class without bucket
+    # additionalProperties combined with declared properties
+    TypedHybrid:
+      type: object
+      required: [ id ]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      additionalProperties:
+        type: string
+        format: date-time
+      description: typed bucket with a companion serializer for the values
+    FreeFormHybrid:
+      type: object
+      properties:
+        id:
+          type: integer
+      additionalProperties: true
+      description: free-form bucket next to declared properties
+    NullableValueHybrid:
+      type: object
+      properties:
+        id:
+          type: integer
+      additionalProperties:
+        type: string
+        nullable: true
+      description: bucket with nullable values
+    NestedNameHybrid:
+      type: object
+      properties:
+        additionalProperty:
+          type: object
+          properties:
+            inner:
+              type: string
+        serializer:
+          type: object
+          properties:
+            inner:
+              type: string
+      additionalProperties:
+        type: object
+        properties:
+          value:
+            type: string
+      description: declared nested types occupy the default names of the bucket value type and the serializer object
+    InheritedHybrid:
+      allOf:
+        - $ref: '#/components/schemas/TypedHybrid'
+        - type: object
+          properties:
+            extra:
+              type: boolean
+      description: bucket inherited through allOf
+    OverridingHybrid:
+      allOf:
+        - $ref: '#/components/schemas/TypedHybrid'
+        - type: object
+          additionalProperties:
+            type: integer
+      description: later allOf member overrides the inherited bucket
+    ObjectValueHybrid:
+      type: object
+      properties:
+        id:
+          type: integer
+      additionalProperties:
+        type: object
+        properties:
+          label:
+            type: string
+          count:
+            type: integer
+      description: inline object value type -> nested AdditionalProperty class
+    CollidingHybrid:
+      type: object
+      properties:
+        id:
+          type: integer
+        additionalProperties:
+          type: string
+      additionalProperties:
+        type: string
+      description: declared property occupies the default bucket name
+    HybridUnion:
+      oneOf:
+        - $ref: '#/components/schemas/HybridUnionA'
+        - $ref: '#/components/schemas/HybridUnionB'
+      discriminator:
+        propertyName: kind
+        mapping:
+          a: '#/components/schemas/HybridUnionA'
+          b: '#/components/schemas/HybridUnionB'
+      description: discriminated oneOf whose variants are hybrids
+    HybridUnionA:
+      type: object
+      properties:
+        kind:
+          type: string
+        aValue:
+          type: string
+      additionalProperties:
+        type: string
+    HybridUnionB:
+      type: object
+      properties:
+        kind:
+          type: string
+        bValue:
+          type: integer
+      additionalProperties: true
+    UntaggedHybridUnion:
+      oneOf:
+        - $ref: '#/components/schemas/UntaggedHybridA'
+        - $ref: '#/components/schemas/UntaggedHybridB'
+      description: oneOf without discriminator whose variants are hybrids
+    UntaggedHybridA:
+      type: object
+      properties:
+        aValue:
+          type: string
+      additionalProperties:
+        type: string
+    UntaggedHybridB:
+      type: object
+      properties:
+        bValue:
+          type: integer
+      additionalProperties: true
+    # a declared property named like the default discriminator must survive the sealed registration
+    TypedThing:
+      type: object
+      properties:
+        type:
+          type: string
+        value:
+          type: string
+    # additionalProperties: nested, inherited and closed shapes
+    HybridOwner:
+      type: object
+      properties:
+        inline:
+          type: object
+          properties:
+            id:
+              type: integer
+          additionalProperties:
+            type: string
+      description: inline hybrid property -> nested class with its own serializer object
+    StringMap:
+      type: object
+      additionalProperties:
+        type: string
+      description: typed map referenced by the bucket-only fixtures
+    BucketOnly:
+      allOf:
+        - $ref: '#/components/schemas/FreeFormMap'
+        - $ref: '#/components/schemas/StringMap'
+      description: allOf of two maps -> data class with only a bucket, later member wins
+    MapWithSiblings:
+      allOf:
+        - $ref: '#/components/schemas/StringMap'
+      properties:
+        id:
+          type: integer
+      description: map ref with sibling properties -> hybrid
+    ClosedEmpty:
+      type: object
+      additionalProperties: false
+      description: additionalProperties false without properties -> JsonElement
+    ClosedAlias:
+      allOf:
+        - $ref: '#/components/schemas/ClosedObject'
+      additionalProperties: false
+      description: additionalProperties false next to a single ref -> typealias
+    NestedHybrid:
+      type: object
+      properties:
+        id:
+          type: integer
+      additionalProperties:
+        $ref: '#/components/schemas/FreeFormHybrid'
+      description: hybrid values inside a bucket
+    MapProperties:
+      type: object
+      properties:
+        meta:
+          additionalProperties: true
+        photos:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Photo'
+      description: free-form and typed map properties
+    SealedHybridBase:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/SealedHybridChild1'
+        - $ref: '#/components/schemas/SealedHybridChild2'
+      properties:
+        kind:
+          type: string
+      additionalProperties:
+        type: string
+      discriminator:
+        propertyName: kind
+        mapping:
+          one: '#/components/schemas/SealedHybridChild1'
+          two: '#/components/schemas/SealedHybridChild2'
+      description: sealed schema with an additionalProperties sibling -> variants inherit the bucket
+    SealedHybridChild1:
+      allOf:
+        - $ref: '#/components/schemas/SealedHybridBase'
+        - type: object
+          properties:
+            one:
+              type: integer
+    SealedHybridChild2:
+      allOf:
+        - $ref: '#/components/schemas/SealedHybridBase'
+        - type: object
+          properties:
+            two:
+              type: string
+          additionalProperties: true

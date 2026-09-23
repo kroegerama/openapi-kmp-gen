@@ -6,17 +6,19 @@
  * Version 1.0.0-SNAPSHOT
  * 
  * Generated Mon, 1 Jun 2026 13:00:00 GMT
- * OpenAPI KMP Gen (version 1.6.0-RC04) by kroegerama
+ * OpenAPI KMP Gen (version 1.6.1) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
 package com.kroegerama.kmp.gen.generated30.models
 
 import androidx.compose.runtime.Immutable
+import com.kroegerama.openapi.kmp.gen.`companion`.AdditionalPropertiesSerializer
 import com.kroegerama.openapi.kmp.gen.`companion`.SerializableBase64
 import com.kroegerama.openapi.kmp.gen.`companion`.SerializableEpochMilliseconds
 import com.kroegerama.openapi.kmp.gen.`companion`.SerializableEpochSeconds
 import com.kroegerama.openapi.kmp.gen.`companion`.SerializableISO8601Instant
+import kotlin.Boolean
 import kotlin.Double
 import kotlin.Float
 import kotlin.Int
@@ -27,13 +29,17 @@ import kotlin.collections.List
 import kotlin.collections.Map
 import kotlin.collections.emptyList
 import kotlin.collections.emptyMap
+import kotlin.collections.setOf
 import kotlin.time.Duration
 import kotlin.uuid.Uuid
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
+import kotlinx.serialization.KeepGeneratedSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 
 /**
  * @param attr1 nullable=false -> not null
@@ -315,6 +321,390 @@ public data class AuditedAction(
   public val auditId: String,
 )
 
+/**
+ * additionalProperties false -> plain class without bucket
+ */
+@Serializable
+@Immutable
+public data class ClosedObject(
+  @SerialName("id")
+  public val id: Long? = null,
+)
+
+/**
+ * typed bucket with a companion serializer for the values
+ */
+@Serializable(with = TypedHybrid.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+public data class TypedHybrid(
+  @SerialName("id")
+  public val id: Long,
+  @SerialName("name")
+  public val name: String? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: Map<String, SerializableISO8601Instant> = emptyMap(),
+) {
+  public object Serializer : AdditionalPropertiesSerializer<TypedHybrid>(tSerializer = generatedSerializer(), bucketName = "additionalProperties")
+}
+
+/**
+ * free-form bucket next to declared properties
+ */
+@Serializable(with = FreeFormHybrid.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+public data class FreeFormHybrid(
+  @SerialName("id")
+  public val id: Long? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: JsonObject = JsonObject(emptyMap()),
+) {
+  public object Serializer : AdditionalPropertiesSerializer<FreeFormHybrid>(tSerializer = generatedSerializer(), bucketName = "additionalProperties")
+}
+
+/**
+ * bucket with nullable values
+ */
+@Serializable(with = NullableValueHybrid.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+public data class NullableValueHybrid(
+  @SerialName("id")
+  public val id: Long? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: Map<String, String?> = emptyMap(),
+) {
+  public object Serializer : AdditionalPropertiesSerializer<NullableValueHybrid>(tSerializer = generatedSerializer(), bucketName = "additionalProperties")
+}
+
+/**
+ * declared nested types occupy the default names of the bucket value type and the serializer object
+ */
+@Serializable(with = NestedNameHybrid.Serializer_::class)
+@KeepGeneratedSerializer
+@Immutable
+public data class NestedNameHybrid(
+  @SerialName("additionalProperty")
+  public val additionalProperty: AdditionalProperty? = null,
+  @SerialName("serializer")
+  public val serializer: Serializer? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: Map<String, AdditionalProperty_> = emptyMap(),
+) {
+  @Serializable
+  @Immutable
+  public data class AdditionalProperty(
+    @SerialName("inner")
+    public val `inner`: String? = null,
+  )
+
+  @Serializable
+  @Immutable
+  public data class Serializer(
+    @SerialName("inner")
+    public val `inner`: String? = null,
+  )
+
+  @Serializable
+  @Immutable
+  public data class AdditionalProperty_(
+    @SerialName("value")
+    public val `value`: String? = null,
+  )
+
+  public object Serializer_ : AdditionalPropertiesSerializer<NestedNameHybrid>(tSerializer = generatedSerializer(), bucketName = "additionalProperties")
+}
+
+/**
+ * bucket inherited through allOf
+ */
+@Serializable(with = InheritedHybrid.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+public data class InheritedHybrid(
+  @SerialName("id")
+  public val id: Long,
+  @SerialName("name")
+  public val name: String? = null,
+  @SerialName("extra")
+  public val extra: Boolean? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: Map<String, SerializableISO8601Instant> = emptyMap(),
+) {
+  public object Serializer : AdditionalPropertiesSerializer<InheritedHybrid>(tSerializer = generatedSerializer(), bucketName = "additionalProperties")
+}
+
+/**
+ * later allOf member overrides the inherited bucket
+ */
+@Serializable(with = OverridingHybrid.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+public data class OverridingHybrid(
+  @SerialName("id")
+  public val id: Long,
+  @SerialName("name")
+  public val name: String? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: Map<String, Long> = emptyMap(),
+) {
+  public object Serializer : AdditionalPropertiesSerializer<OverridingHybrid>(tSerializer = generatedSerializer(), bucketName = "additionalProperties")
+}
+
+/**
+ * inline object value type -> nested AdditionalProperty class
+ */
+@Serializable(with = ObjectValueHybrid.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+public data class ObjectValueHybrid(
+  @SerialName("id")
+  public val id: Long? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: Map<String, AdditionalProperty> = emptyMap(),
+) {
+  @Serializable
+  @Immutable
+  public data class AdditionalProperty(
+    @SerialName("label")
+    public val label: String? = null,
+    @SerialName("count")
+    public val count: Long? = null,
+  )
+
+  public object Serializer : AdditionalPropertiesSerializer<ObjectValueHybrid>(tSerializer = generatedSerializer(), bucketName = "additionalProperties")
+}
+
+/**
+ * declared property occupies the default bucket name
+ */
+@Serializable(with = CollidingHybrid.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+public data class CollidingHybrid(
+  @SerialName("id")
+  public val id: Long? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: String? = null,
+  @SerialName("additionalProperties_")
+  public val additionalProperties_: Map<String, String> = emptyMap(),
+) {
+  public object Serializer : AdditionalPropertiesSerializer<CollidingHybrid>(tSerializer = generatedSerializer(), bucketName = "additionalProperties_")
+}
+
+/**
+ * discriminated oneOf whose variants are hybrids
+ */
+@Serializable
+@Immutable
+@JsonClassDiscriminator("kind")
+public sealed interface HybridUnion
+
+@Serializable(with = HybridUnionA.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+@SerialName("a")
+public data class HybridUnionA(
+  @SerialName("aValue")
+  public val aValue: String? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: Map<String, String> = emptyMap(),
+) : HybridUnion {
+  public object Serializer : AdditionalPropertiesSerializer<HybridUnionA>(tSerializer = generatedSerializer(), bucketName = "additionalProperties", ignoredKeys = setOf("kind"))
+}
+
+@Serializable(with = HybridUnionB.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+@SerialName("b")
+public data class HybridUnionB(
+  @SerialName("bValue")
+  public val bValue: Long? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: JsonObject = JsonObject(emptyMap()),
+) : HybridUnion {
+  public object Serializer : AdditionalPropertiesSerializer<HybridUnionB>(tSerializer = generatedSerializer(), bucketName = "additionalProperties", ignoredKeys = setOf("kind"))
+}
+
+/**
+ * oneOf without discriminator whose variants are hybrids
+ */
+@Serializable
+@Immutable
+@JsonClassDiscriminator("type")
+public sealed interface UntaggedHybridUnion
+
+@Serializable(with = UntaggedHybridA.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+@SerialName("UntaggedHybridA")
+public data class UntaggedHybridA(
+  @SerialName("aValue")
+  public val aValue: String? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: Map<String, String> = emptyMap(),
+) : UntaggedHybridUnion {
+  public object Serializer : AdditionalPropertiesSerializer<UntaggedHybridA>(tSerializer = generatedSerializer(), bucketName = "additionalProperties", ignoredKeys = setOf("type"))
+}
+
+@Serializable(with = UntaggedHybridB.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+@SerialName("UntaggedHybridB")
+public data class UntaggedHybridB(
+  @SerialName("bValue")
+  public val bValue: Long? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: JsonObject = JsonObject(emptyMap()),
+) : UntaggedHybridUnion {
+  public object Serializer : AdditionalPropertiesSerializer<UntaggedHybridB>(tSerializer = generatedSerializer(), bucketName = "additionalProperties", ignoredKeys = setOf("type"))
+}
+
+@Serializable
+@Immutable
+public data class TypedThing(
+  @SerialName("type")
+  public val type: String? = null,
+  @SerialName("value")
+  public val `value`: String? = null,
+)
+
+/**
+ * inline hybrid property -> nested class with its own serializer object
+ */
+@Serializable
+@Immutable
+public data class HybridOwner(
+  @SerialName("inline")
+  public val `inline`: Inline? = null,
+) {
+  @Serializable(with = Inline.Serializer::class)
+  @KeepGeneratedSerializer
+  @Immutable
+  public data class Inline(
+    @SerialName("id")
+    public val id: Long? = null,
+    @SerialName("additionalProperties")
+    public val additionalProperties: Map<String, String> = emptyMap(),
+  ) {
+    public object Serializer : AdditionalPropertiesSerializer<Inline>(tSerializer = generatedSerializer(), bucketName = "additionalProperties")
+  }
+}
+
+/**
+ * allOf of two maps -> data class with only a bucket, later member wins
+ */
+@Serializable(with = BucketOnly.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+public data class BucketOnly(
+  @SerialName("additionalProperties")
+  public val additionalProperties: Map<String, String> = emptyMap(),
+) {
+  public object Serializer : AdditionalPropertiesSerializer<BucketOnly>(tSerializer = generatedSerializer(), bucketName = "additionalProperties")
+}
+
+/**
+ * map ref with sibling properties -> hybrid
+ */
+@Serializable(with = MapWithSiblings.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+public data class MapWithSiblings(
+  @SerialName("id")
+  public val id: Long? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: Map<String, String> = emptyMap(),
+) {
+  public object Serializer : AdditionalPropertiesSerializer<MapWithSiblings>(tSerializer = generatedSerializer(), bucketName = "additionalProperties")
+}
+
+/**
+ * hybrid values inside a bucket
+ */
+@Serializable(with = NestedHybrid.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+public data class NestedHybrid(
+  @SerialName("id")
+  public val id: Long? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: Map<String, FreeFormHybrid> = emptyMap(),
+) {
+  public object Serializer : AdditionalPropertiesSerializer<NestedHybrid>(tSerializer = generatedSerializer(), bucketName = "additionalProperties")
+}
+
+/**
+ * free-form and typed map properties
+ */
+@Serializable
+@Immutable
+public data class MapProperties(
+  @SerialName("meta")
+  public val meta: JsonObject? = null,
+  @SerialName("photos")
+  public val photos: Map<String, Photo>? = null,
+)
+
+/**
+ * sealed schema with an additionalProperties sibling -> variants inherit the bucket
+ */
+@Serializable
+@Immutable
+@JsonClassDiscriminator("kind")
+public sealed interface SealedHybridBase
+
+@Serializable(with = SealedHybridChild1.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+@SerialName("one")
+public data class SealedHybridChild1(
+  @SerialName("one")
+  public val one: Long? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: Map<String, String> = emptyMap(),
+) : SealedHybridBase {
+  public object Serializer : AdditionalPropertiesSerializer<SealedHybridChild1>(tSerializer = generatedSerializer(), bucketName = "additionalProperties", ignoredKeys = setOf("kind"))
+}
+
+@Serializable(with = SealedHybridChild2.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+@SerialName("two")
+public data class SealedHybridChild2(
+  @SerialName("two")
+  public val two: String? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: JsonObject = JsonObject(emptyMap()),
+) : SealedHybridBase {
+  public object Serializer : AdditionalPropertiesSerializer<SealedHybridChild2>(tSerializer = generatedSerializer(), bucketName = "additionalProperties", ignoredKeys = setOf("kind"))
+}
+
+@Serializable(with = HybridBodyRequest.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+public data class HybridBodyRequest(
+  @SerialName("id")
+  public val id: Long,
+  @SerialName("additionalProperties")
+  public val additionalProperties: Map<String, String> = emptyMap(),
+) {
+  public object Serializer : AdditionalPropertiesSerializer<HybridBodyRequest>(tSerializer = generatedSerializer(), bucketName = "additionalProperties")
+}
+
+@Serializable(with = HybridBody200Response.Serializer::class)
+@KeepGeneratedSerializer
+@Immutable
+public data class HybridBody200Response(
+  @SerialName("count")
+  public val count: Long? = null,
+  @SerialName("additionalProperties")
+  public val additionalProperties: JsonObject = JsonObject(emptyMap()),
+) {
+  public object Serializer : AdditionalPropertiesSerializer<HybridBody200Response>(tSerializer = generatedSerializer(), bucketName = "additionalProperties")
+}
+
 public typealias DateTime = SerializableISO8601Instant
 
 /**
@@ -323,3 +713,33 @@ public typealias DateTime = SerializableISO8601Instant
 public typealias NullableTestAllOfTypealias = Photo?
 
 public typealias RefTypealias = Photo
+
+/**
+ * additionalProperties true -> JsonObject typealias
+ */
+public typealias FreeFormMap = JsonObject
+
+/**
+ * empty value schema -> JsonObject typealias
+ */
+public typealias EmptySchemaMap = JsonObject
+
+/**
+ * nullable empty value schema -> JsonObject typealias
+ */
+public typealias NullableFreeFormMap = JsonObject
+
+/**
+ * typed map referenced by the bucket-only fixtures
+ */
+public typealias StringMap = Map<String, String>
+
+/**
+ * additionalProperties false without properties -> JsonElement
+ */
+public typealias ClosedEmpty = JsonElement
+
+/**
+ * additionalProperties false next to a single ref -> typealias
+ */
+public typealias ClosedAlias = ClosedObject

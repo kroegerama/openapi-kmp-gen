@@ -6,7 +6,7 @@
  * Version 1.0.0-SNAPSHOT
  * 
  * Generated Mon, 1 Jun 2026 13:00:00 GMT
- * OpenAPI KMP Gen (version 1.6.0-RC04) by kroegerama
+ * OpenAPI KMP Gen (version 1.6.1) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
@@ -17,11 +17,14 @@ import com.kroegerama.kmp.gen.generated31.Api
 import com.kroegerama.kmp.gen.generated31.Auth
 import com.kroegerama.kmp.gen.generated31.models.DateTime
 import com.kroegerama.kmp.gen.generated31.models.DefaultValue
+import com.kroegerama.kmp.gen.generated31.models.HybridBody200Response
+import com.kroegerama.kmp.gen.generated31.models.HybridBodyRequest
 import com.kroegerama.kmp.gen.generated31.models.IntegerTest
 import com.kroegerama.kmp.gen.generated31.models.NullableResponse200Response
 import com.kroegerama.kmp.gen.generated31.models.NumberTest
 import com.kroegerama.kmp.gen.generated31.models.Photo
 import com.kroegerama.kmp.gen.generated31.models.SerialTest
+import com.kroegerama.kmp.gen.generated31.models.TypedHybrid
 import com.kroegerama.openapi.kmp.gen.`companion`.AuthPlugin.Plugin.authKeys
 import com.kroegerama.openapi.kmp.gen.`companion`.Base64Serializer
 import com.kroegerama.openapi.kmp.gen.`companion`.CallException
@@ -57,6 +60,7 @@ import kotlin.collections.Map
 import kotlin.collections.emptyList
 import kotlin.collections.emptyMap
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.JsonObject
 
 public object DefaultApi {
   /**
@@ -242,6 +246,49 @@ public object DefaultApi {
     method = HttpMethod.parse("POST")
     url.appendPathSegments(
       "mapBody",
+    )
+    contentType(ContentType.Application.Json)
+    setBody(body)
+    decorator()
+  }
+
+  /**
+   * `POST /hybridBody`
+   *
+   * @return inline hybrid body and response -> hoisted classes with a bucket property
+   */
+  public suspend fun hybridBody(body: HybridBodyRequest, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<HybridBody200Response>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("POST")
+    url.appendPathSegments(
+      "hybridBody",
+    )
+    contentType(ContentType.Application.Json)
+    setBody(body)
+    decorator()
+  }
+
+  /**
+   * `GET /hybridList`
+   *
+   * @return list of hybrids -> reified list serializer goes through the class serializer
+   */
+  public suspend fun hybridList(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<List<TypedHybrid>>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("GET")
+    url.appendPathSegments(
+      "hybridList",
+    )
+    decorator()
+  }
+
+  /**
+   * `POST /freeFormBody`
+   *
+   * @return free-form body and response -> JsonObject
+   */
+  public suspend fun freeFormBody(body: JsonObject = JsonObject(emptyMap()), decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<JsonObject>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("POST")
+    url.appendPathSegments(
+      "freeFormBody",
     )
     contentType(ContentType.Application.Json)
     setBody(body)
