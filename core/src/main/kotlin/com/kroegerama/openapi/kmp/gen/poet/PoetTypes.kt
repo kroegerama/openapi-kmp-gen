@@ -2,9 +2,12 @@ package com.kroegerama.openapi.kmp.gen.poet
 
 import com.kroegerama.openapi.kmp.gen.OptionSet
 import com.kroegerama.openapi.kmp.gen.spec.SpecPrimitiveType
-import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.LIST
+import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.MemberName.Companion.member
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.TypeName
 
 private const val COMPANION_PACKAGE = "com.kroegerama.openapi.kmp.gen.companion"
 
@@ -84,7 +87,10 @@ class PoetTypes(
         val Serializable = ClassName(KTX_SERIALIZATION, "Serializable")
         val SerialName = ClassName(KTX_SERIALIZATION, "SerialName")
         val JsonElement = ClassName(KTX_SERIALIZATION_JSON, "JsonElement")
+        val JsonObject = ClassName(KTX_SERIALIZATION_JSON, "JsonObject")
         val JsonClassDiscriminator = ClassName(KTX_SERIALIZATION_JSON, "JsonClassDiscriminator")
+        val KeepGeneratedSerializer = ClassName(KTX_SERIALIZATION, "KeepGeneratedSerializer")
+        val AdditionalPropertiesSerializer = ClassName(COMPANION_PACKAGE, "AdditionalPropertiesSerializer")
 
         val Deprecated = ClassName("kotlin", "Deprecated")
         val Immutable = ClassName("androidx.compose.runtime", "Immutable")
@@ -121,4 +127,5 @@ object PoetMembers {
     val ContentType = MemberName(KTOR_HTTP_PACKAGE, "contentType")
     val EmptyList = MemberName("kotlin.collections", "emptyList")
     val EmptyMap = MemberName("kotlin.collections", "emptyMap")
+    val SetOf = MemberName("kotlin.collections", "setOf")
 }

@@ -15,8 +15,6 @@ import java.util.IdentityHashMap
 
 fun Schema<*>.getSpecType(): SpecSchemaType {
     if (`$ref` != null) return SpecSchemaType.Ref
-    if (additionalProperties == true) return SpecSchemaType.Raw
-    if (additionalProperties is Schema<*>) return SpecSchemaType.Map
     val resolvedType = resolveType()
 
     if (resolvedType == "array") return SpecSchemaType.Array
@@ -68,9 +66,44 @@ fun Schema<*>.getSpecType(): SpecSchemaType {
         sealedVariants() != null -> SpecSchemaType.Sealed
         anyOf.orEmpty().any { !it.isNullType() } -> SpecSchemaType.Object
         !allOf.isNullOrEmpty() -> SpecSchemaType.Object
-        properties.isNullOrEmpty() -> SpecSchemaType.Raw
-        else -> SpecSchemaType.Object
+        !properties.isNullOrEmpty() -> SpecSchemaType.Object
+        hasAdditionalProperties() -> SpecSchemaType.Map
+        else -> SpecSchemaType.Raw
     }
+}
+
+fun Schema<*>.hasAdditionalProperties(): Boolean = additionalPropertiesSchema() != null
+
+fun Schema<*>.additionalPropertiesSchema(): Schema<*>? = when (val value = additionalProperties) {
+    true -> Schema<Any>()
+    is Schema<*> -> when (value.booleanSchemaValue) {
+        false -> null
+        else -> value
+    }
+
+    else -> null
+}
+
+fun Schema<*>.resolveAdditionalProperties(spec: OpenAPI): Schema<*>? {
+    val visited: MutableSet<Schema<*>> = Collections.newSetFromMap(IdentityHashMap())
+
+    fun Schema<*>.inner(): Schema<*>? {
+        if (!visited.add(this)) return null
+        resolveRef(spec)?.let { return it.inner() }
+        var inherited: Schema<*>? = singleNonNullVariant()?.inner()
+        if (sealedVariants() == null) {
+            anyOf?.forEach { inherited = it.inner() ?: inherited }
+        }
+        allOf?.forEach { inherited = it.inner() ?: inherited }
+        return additionalPropertiesSchema() ?: inherited
+    }
+
+    return inner()
+}
+
+fun Schema<*>.sealedDiscriminatorName(): String? {
+    if (getSpecType() != SpecSchemaType.Sealed) return null
+    return discriminator?.propertyName ?: Constants.DEFAULT_DISCRIMINATOR
 }
 
 /**
@@ -100,7 +133,7 @@ tailrec fun Schema<*>.effectiveSchema(): Schema<*> {
 private fun Schema<*>.wrappedSchema(): Schema<*>? {
     if (`$ref` != null) return null
     if (!properties.isNullOrEmpty()) return null
-    if (additionalProperties == true || additionalProperties is Schema<*>) return null
+    if (hasAdditionalProperties()) return null
     if (!enum.isNullOrEmpty()) return null
     if (listOfNotNull(oneOf, anyOf, allOf).size != 1) return null
     allOf?.let { members ->
@@ -144,7 +177,7 @@ private fun Schema<*>.isIntrinsicallyNullable(spec: OpenAPI): Boolean {
         if (current.anyOf.orEmpty().any { it.isNullType() }) return true
         current = current.resolveRef(spec)
             ?: current.effectiveSchema().takeIf { it !== current }
-            ?: return false
+                    ?: return false
     }
     return false
 }
@@ -154,7 +187,7 @@ fun Schema<*>.isNullType(): Boolean =
 
 /**
  * Fails generation when this schema is a nullable wrapper with sibling keywords whose single
- * non-null variant is not an object: primitives, enums, arrays and maps cannot be merged into
+ * non-null variant is not an object: primitives, enums and arrays cannot be merged into
  * an object with the sibling properties. Schemas without such a variant pass unchanged.
  */
 fun Schema<*>.requireMergeableVariant(spec: OpenAPI, name: () -> String) {
@@ -167,8 +200,7 @@ fun Schema<*>.requireMergeableVariant(spec: OpenAPI, name: () -> String) {
     when (terminal.getSpecType()) {
         is SpecSchemaType.Primitive,
         SpecSchemaType.Enum,
-        SpecSchemaType.Array,
-        SpecSchemaType.Map -> throw IllegalStateException(
+        SpecSchemaType.Array -> throw IllegalStateException(
             "cannot generate '${name()}': the schema combines a nullable oneOf/anyOf wrapper with sibling keywords, " +
                     "but the remaining variant is not an object and cannot be merged into one"
         )
@@ -300,7 +332,7 @@ private fun Schema<*>.definesType(): Boolean =
             !enum.isNullOrEmpty() ||
             items != null ||
             !properties.isNullOrEmpty() ||
-            additionalProperties != null ||
+            hasAdditionalProperties() ||
             oneOf != null ||
             anyOf != null ||
             allOf != null

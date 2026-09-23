@@ -114,7 +114,10 @@ sealed interface SpecSchema {
     data class Map(
         val items: SimpleType,
         val itemsNullable: Boolean
-    ) : SimpleType
+    ) : SimpleType {
+        /** True for a map whose values are unconstrained JSON, rendered as `JsonObject`. */
+        val isFreeForm: Boolean get() = items is AnyComplex
+    }
 
     data class Typealias(
         override val typeNames: List<String>,
@@ -141,8 +144,16 @@ sealed interface SpecSchema {
         override val deprecated: Boolean,
         override val description: String?,
         val properties: List<SpecProperty>,
+        val additionalProperties: AdditionalProperties?,
         val children: List<NamedSpecSchema>
-    ) : NamedSpecSchema
+    ) : NamedSpecSchema {
+        data class AdditionalProperties(
+            val name: String,
+            val type: Map,
+            val serializerName: String,
+            val ignoredKeys: Set<String>
+        )
+    }
 
     data class Sealed(
         override val typeNames: List<String>,

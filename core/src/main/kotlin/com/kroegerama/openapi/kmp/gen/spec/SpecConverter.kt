@@ -79,15 +79,15 @@ class SpecConverter(
     }
 
     /**
-     * Registers each discriminated sealed schema's discriminator property as an ignored property
-     * of its `$ref` variants. Must run before schema conversion: [convertObject] consumes
+     * Registers each sealed schema's effective discriminator property, the `type` fallback included, as an
+     * ignored property of its `$ref` variants. Must run before schema conversion: [convertObject] consumes
      * [ignoredProperties] in spec declaration order, so a variant declared before its sealed
      * wrapper would otherwise keep an explicit discriminator property that collides with the
      * inherited `@JsonClassDiscriminator` at runtime.
      */
     private fun registerSealedDiscriminatorProperties() {
         SpecVisitor(spec, options).visit(allComponentSchemas = true) { schema ->
-            val discriminatorProperty = schema.discriminator?.propertyName ?: return@visit
+            val discriminatorProperty = schema.sealedDiscriminatorName() ?: return@visit
             schema.sealedVariants()?.forEach { variant ->
                 val ref = variant.effectiveSchema().`$ref` ?: return@forEach
                 ignoredProperties.getOrPut(ref.refAsTypeNames(), ::mutableSetOf) += discriminatorProperty
@@ -351,7 +351,7 @@ class SpecConverter(
             )
 
             SpecSchemaType.Map -> {
-                val mapItemsSchema = effective.additionalProperties as Schema<*>
+                val mapItemsSchema = requireNotNull(effective.additionalPropertiesSchema())
                 SpecSchema.Map(
                     items = resolveSchema(mapItemsSchema),
                     itemsNullable = mapItemsSchema.isNullable(spec, null)
@@ -481,7 +481,7 @@ class SpecConverter(
             )
 
             SpecSchemaType.Map -> {
-                val mapItemsSchema = schema.additionalProperties as Schema<*>
+                val mapItemsSchema = requireNotNull(schema.additionalPropertiesSchema())
                 SpecSchema.Typealias(
                     typeNames = typeNames,
                     deprecated = schema.deprecated ?: false,
@@ -524,6 +524,7 @@ class SpecConverter(
         schema: Schema<*>
     ): SpecSchema.Sealed {
         val discriminator: Discriminator? = schema.discriminator
+        val discriminatorPropertyName = schema.sealedDiscriminatorName()!!
         val children = mutableListOf<SpecSchema.NamedSpecSchema>()
 
         val types: List<SpecSchema.Ref> = schema.sealedVariants().orEmpty().mapIndexed { index, rawItem ->
@@ -536,18 +537,14 @@ class SpecConverter(
                 val refTypeNames = item.`$ref`.refAsTypeNames()
                 modelSerialNames[refTypeNames] = mappedName
                 modelInterfaces.getOrPut(refTypeNames, ::mutableListOf) += typeNames
-                discriminator?.propertyName?.let { discriminator ->
-                    ignoredProperties.getOrPut(refTypeNames, ::mutableSetOf) += discriminator
-                }
+                ignoredProperties.getOrPut(refTypeNames, ::mutableSetOf) += discriminatorPropertyName
 
                 SpecSchema.Ref(
                     typeNames = refTypeNames
                 )
             } else {
                 val childTypeNames = typeNames + "OneOf$index"
-                discriminator?.propertyName?.let { discriminator ->
-                    ignoredProperties.getOrPut(childTypeNames, ::mutableSetOf) += discriminator
-                }
+                ignoredProperties.getOrPut(childTypeNames, ::mutableSetOf) += discriminatorPropertyName
                 children += convertNamedSchema(
                     typeNames = childTypeNames,
                     schema = item,
@@ -559,7 +556,6 @@ class SpecConverter(
                 )
             }
         }
-        val discriminatorPropertyName = discriminator?.propertyName ?: "type"
 
         val sealed = SpecSchema.Sealed(
             typeNames = typeNames,
@@ -602,13 +598,45 @@ class SpecConverter(
                 description = propertySchema.fullDescription() ?: propertySchema.effectiveSchema().fullDescription()
             )
         }
+        val additionalProperties = schema.resolveAdditionalProperties(spec)?.let { valueSchema ->
+            val usedNames = properties.flatMapTo(mutableSetOf()) { listOf(it.name, it.rawName) }
+            val type = SpecSchema.Map(
+                items = convertSimpleType(
+                    parentTypeNames = typeNames,
+                    guessedName = "AdditionalProperty".distinctPrefixFrom(children.map { it.typeNames.last() }),
+                    schema = valueSchema,
+                    schemaNameEvaluator = { it },
+                    schemaEmitter = { children += it }
+                ),
+                itemsNullable = valueSchema.isNullable(spec, null)
+            )
+            SpecSchema.Object.AdditionalProperties(
+                name = "additionalProperties".distinctFrom(usedNames),
+                type = type,
+                serializerName = "Serializer".distinctFrom(children.map { it.typeNames.last() }),
+                ignoredKeys = ignoredProperties[typeNames].orEmpty().toSet()
+            )
+        }
         return SpecSchema.Object(
             typeNames = typeNames,
             deprecated = schema.deprecated ?: false,
             properties = properties,
+            additionalProperties = additionalProperties,
             children = children,
             description = schema.fullDescription()
         )
+    }
+
+    private fun String.distinctFrom(used: Collection<String>): String {
+        var name = this
+        while (name in used) name += "_"
+        return name
+    }
+
+    private fun String.distinctPrefixFrom(used: Collection<String>): String {
+        var name = this
+        while (used.any { it.startsWith(name) }) name += "_"
+        return name
     }
 
     private fun convertSimpleType(
@@ -642,7 +670,7 @@ class SpecConverter(
             )
 
             SpecSchemaType.Map -> {
-                val mapItemsSchema = effective.additionalProperties as Schema<*>
+                val mapItemsSchema = requireNotNull(effective.additionalPropertiesSchema())
                 SpecSchema.Map(
                     items = convertSimpleType(
                         parentTypeNames = parentTypeNames,

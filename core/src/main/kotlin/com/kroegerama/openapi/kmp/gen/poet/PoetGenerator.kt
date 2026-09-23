@@ -11,6 +11,7 @@ import com.kroegerama.openapi.kmp.gen.spec.SpecSchema
 import com.kroegerama.openapi.kmp.gen.spec.SpecSecurityScheme
 import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.BOOLEAN
+import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.DOUBLE
 import com.squareup.kotlinpoet.FLOAT
@@ -33,6 +34,7 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asTypeName
 import com.squareup.kotlinpoet.buildCodeBlock
+import com.squareup.kotlinpoet.joinToCode
 import com.squareup.kotlinpoet.withIndent
 import java.time.format.DateTimeFormatter
 
@@ -402,10 +404,11 @@ class PoetGenerator(
 
     private fun createParameter(parameter: SpecParameter): ParameterSpec {
         return poetParameter(parameter.name, convertSimpleType(parameter.schema).nullable(parameter.nullable)) {
+            val schema = parameter.schema
             when {
                 parameter.nullable -> defaultValue("null")
-                parameter.schema is SpecSchema.Array -> defaultValue("%M()", PoetMembers.EmptyList)
-                parameter.schema is SpecSchema.Map -> defaultValue("%M()", PoetMembers.EmptyMap)
+                schema is SpecSchema.Array -> defaultValue("%M()", PoetMembers.EmptyList)
+                schema is SpecSchema.Map -> defaultEmptyMap(schema)
             }
             parameter.description?.let {
                 addKdoc("%L", it)
@@ -414,10 +417,11 @@ class PoetGenerator(
     }
 
     private fun ParameterSpec.Builder.handleSchemaInfo(info: SpecOperation.SchemaInfo) {
+        val type = info.type
         when {
             info.acceptsNull -> defaultValue("null")
-            info.type is SpecSchema.Array -> defaultValue("%M()", PoetMembers.EmptyList)
-            info.type is SpecSchema.Map -> defaultValue("%M()", PoetMembers.EmptyMap)
+            type is SpecSchema.Array -> defaultValue("%M()", PoetMembers.EmptyList)
+            type is SpecSchema.Map -> defaultEmptyMap(type)
         }
         info.description?.let {
             addKdoc("%L", it)
@@ -582,7 +586,13 @@ class PoetGenerator(
 
                     is SpecSchema.Object -> poetClass(name) {
                         addModifiers(KModifier.DATA)
-                        addAnnotation(serializable())
+                        val additionalProperties = schema.additionalProperties
+                        if (additionalProperties != null) {
+                            addAnnotation(serializable(name.nestedClass(additionalProperties.serializerName)))
+                            addAnnotation(keepGeneratedSerializer())
+                        } else {
+                            addAnnotation(serializable())
+                        }
                         if (schema.deprecated) {
                             addAnnotation(deprecated())
                         }
@@ -594,19 +604,24 @@ class PoetGenerator(
                         specModel.modelSerialNames[schema.typeNames]?.let { serialName ->
                             addAnnotation(serialName(serialName))
                         }
-                        val properties: Array<PropertySpec> = schema.properties.map(::convertSpecProperty).toTypedArray()
+                        val allProperties = schema.properties + listOfNotNull(additionalProperties?.asSpecProperty())
+                        val properties: Array<PropertySpec> = allProperties.map(::convertSpecProperty).toTypedArray()
                         primaryConstructor(*properties) { idx ->
-                            val prop = schema.properties[idx]
+                            val prop = allProperties[idx]
+                            val type = prop.type
                             when {
                                 prop.nullable -> defaultValue("null")
-                                prop.type is SpecSchema.Array -> defaultValue("%M()", PoetMembers.EmptyList)
-                                prop.type is SpecSchema.Map -> defaultValue("%M()", PoetMembers.EmptyMap)
+                                type is SpecSchema.Array -> defaultValue("%M()", PoetMembers.EmptyList)
+                                type is SpecSchema.Map -> defaultEmptyMap(type)
                             }
                             prop.description?.let {
                                 addKdoc("%L", it)
                             }
                         }
                         addTypes(inner(schema.children))
+                        if (additionalProperties != null) {
+                            addType(createAdditionalPropertiesSerializer(name, additionalProperties))
+                        }
 
                         specModel.modelInterfaces[schema.typeNames]?.let { interfaces ->
                             interfaces.forEach {
@@ -651,6 +666,38 @@ class PoetGenerator(
 
         val types = inner(specModel.schemas)
         return types to typeAliases
+    }
+
+    private fun SpecSchema.Object.AdditionalProperties.asSpecProperty() = SpecProperty(
+        name = name,
+        rawName = name,
+        deprecated = false,
+        nullable = false,
+        type = type,
+        description = null
+    )
+
+    private fun createAdditionalPropertiesSerializer(
+        className: ClassName,
+        additionalProperties: SpecSchema.Object.AdditionalProperties
+    ): TypeSpec {
+        return poetObject(className.nestedClass(additionalProperties.serializerName)) {
+            superclass(PoetTypes.AdditionalPropertiesSerializer.parameterizedBy(className))
+            addSuperclassConstructorParameter("tSerializer = generatedSerializer()")
+            addSuperclassConstructorParameter("bucketName = %S", additionalProperties.name)
+            if (additionalProperties.ignoredKeys.isNotEmpty()) {
+                val keys = additionalProperties.ignoredKeys.map { CodeBlock.of("%S", it) }.joinToCode()
+                addSuperclassConstructorParameter("ignoredKeys = %M(%L)", PoetMembers.SetOf, keys)
+            }
+        }
+    }
+
+    private fun ParameterSpec.Builder.defaultEmptyMap(map: SpecSchema.Map) {
+        if (map.isFreeForm) {
+            defaultValue("%T(%M())", PoetTypes.JsonObject, PoetMembers.EmptyMap)
+        } else {
+            defaultValue("%M()", PoetMembers.EmptyMap)
+        }
     }
 
     private fun convertSpecProperty(property: SpecProperty): PropertySpec {
@@ -747,10 +794,14 @@ class PoetGenerator(
             convertSimpleType(simpleType.items).nullable(simpleType.itemsNullable)
         )
 
-        is SpecSchema.Map -> MAP.parameterizedBy(
-            STRING,
-            convertSimpleType(simpleType.items).nullable(simpleType.itemsNullable)
-        )
+        is SpecSchema.Map -> if (simpleType.isFreeForm) {
+            PoetTypes.JsonObject
+        } else {
+            MAP.parameterizedBy(
+                STRING,
+                convertSimpleType(simpleType.items).nullable(simpleType.itemsNullable)
+            )
+        }
 
         is SpecSchema.Ref -> types.modelName(*simpleType.typeNames.toTypedArray())
         is SpecSchema.AnyComplex -> PoetTypes.JsonElement
@@ -759,6 +810,12 @@ class PoetGenerator(
     }
 
     private fun serializable() = poetAnnotation(PoetTypes.Serializable) {}
+
+    private fun serializable(with: ClassName) = poetAnnotation(PoetTypes.Serializable) {
+        addMember("with = %T::class", with)
+    }
+
+    private fun keepGeneratedSerializer() = poetAnnotation(PoetTypes.KeepGeneratedSerializer) {}
 
     private fun discriminator(discriminator: String) = poetAnnotation(PoetTypes.JsonClassDiscriminator) {
         addMember("%S", discriminator)

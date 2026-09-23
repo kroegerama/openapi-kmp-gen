@@ -24,5 +24,7 @@ object Constants {
 
     const val EXT_FORCE_CREATE = "x-kgen-force-create"
 
+    const val DEFAULT_DISCRIMINATOR = "type"
+
     val generatorInfo: String = "OpenAPI KMP Gen (version %s) by kroegerama".format(BuildConfig.COMPANION)
 }
