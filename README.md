@@ -23,6 +23,7 @@ Linux.
 - Supports security (`oauth2` and `openIdConnect` schemes are generated as bearer auth)
 - Keycloak / OpenID Connect companion client (password, client-credentials, Authorization Code + PKCE and Device Authorization (RFC 8628) grants, automatic token refresh)
 - Generated named primitives
+- `additionalProperties` (typed and free-form maps, also combined with declared properties)
 - Allows injection of decorators for ktor client, serialization, etc.
 - Allows filtering of APIs to only generate a subset of the OpenAPI using tags
 

@@ -71,7 +71,7 @@ Supported auth types (`AuthItem`):
 | Type                         | Cause                        |
 |------------------------------|------------------------------|
 | `HttpCallException`          | Non-success HTTP status      |
-| `CallSerializationException` | Body deserialization failure |
+| `SerializationCallException` | Body deserialization failure |
 | `IOCallException`            | Network / IO error           |
 | `UnexpectedCallException`    | Any other throwable          |
 
@@ -102,6 +102,24 @@ overload is required for the annotated type aliases above: reified serializer lo
 underlying type (`Instant`, `ByteArray`) and would fall back to its builtin serializer.
 `encodeNullableToJsonElement` covers the same case for request bodies, and the `eitherRequest`
 overload with an explicit `deserializer` covers response bodies.
+
+`AdditionalPropertiesSerializer` backs classes generated from schemas that combine declared
+`properties` with `additionalProperties`. It is a `JsonTransformingSerializer` around the plugin
+serializer: on decoding every key the class does not declare is moved into the bucket property, on
+encoding the bucket entries are written back at the top level and the bucket key is omitted.
+Declared keys are matched by serial name and `@JsonNames` alias, so `useAlternativeNames = false`
+and a `JsonNamingStrategy` are not supported.
+
+```kotlin
+@Serializable(with = Pet.Serializer::class)
+@KeepGeneratedSerializer
+data class Pet(
+    val name: String,
+    val additionalProperties: Map<String, Long> = emptyMap(),
+) {
+    object Serializer : AdditionalPropertiesSerializer<Pet>(generatedSerializer(), bucketName = "additionalProperties")
+}
+```
 
 ### `FormDataContent`
 
@@ -200,5 +218,4 @@ val result = DefaultApi.getPhoto(1)
 - Targets: JVM (11+), Android (minSdk 21), iOS, macOS, Linux, MinGW
 - Explicit API mode enabled
 - Published via Vanniktech Maven Publish plugin
-- Includes consumer ProGuard rules for Android
 - Build config is auto-generated with Ktor/Compose/companion version strings

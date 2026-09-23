@@ -30,6 +30,7 @@ kotlin {
         optIn.add("kotlin.contracts.ExperimentalContracts")
         optIn.add("kotlin.io.encoding.ExperimentalEncodingApi")
         optIn.add("kotlin.time.ExperimentalTime")
+        optIn.add("kotlinx.serialization.ExperimentalSerializationApi")
 
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
@@ -138,6 +139,7 @@ extensions.configure<KotlinSourceSetContainer>("kotlin") {
 }
 
 val generateBuildConfig = tasks.register<GenerateBuildConfigTask>("generateBuildConfig") {
+    description = "Generates the BuildConfig file. Exposes compose/companion/ktor version as String."
     outputDir = buildConfigDir
     compose = libs.versions.compose
     ktor = libs.versions.ktor
