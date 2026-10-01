@@ -75,7 +75,6 @@ kotlin {
             api(libs.ktor.client.encoding)
             api(libs.ktor.client.auth)
             api(libs.ktor.serialization.kotlinx.json)
-            api(libs.ktor.client.logging)
             api(libs.arrow.core)
             api(libs.compose.runtime.annotation)
         }

@@ -183,7 +183,6 @@ All dependencies are exposed with `api` scope.
 | `ktor-client-content-negotiation` | common      |
 | `ktor-client-encoding`            | common      |
 | `ktor-client-auth`                | common      |
-| `ktor-client-logging`             | common      |
 | `ktor-serialization-kotlinx-json` | common      |
 | `arrow-core`                      | common      |
 | `compose-runtime-annotation`      | common      |

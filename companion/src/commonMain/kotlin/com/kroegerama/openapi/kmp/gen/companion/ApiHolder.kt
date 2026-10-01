@@ -54,8 +54,6 @@ public abstract class ApiHolder {
         userAgent: String? = defaultUserAgent,
         withCookies: Boolean = false,
         withCompression: Boolean = false,
-        withLogging: Boolean = false,
-        sanitizeHeaders: Set<String> = defaultSensitiveHeaders,
         createHttpClient: (decorator: HttpClientConfig<PlatformHttpClientEngineConfig>.() -> Unit) -> HttpClient = ::createPlatformHttpClient,
         decorator: HttpClientConfig<PlatformHttpClientEngineConfig>.() -> Unit = {}
     ) {
@@ -66,8 +64,6 @@ public abstract class ApiHolder {
                 withCookies = withCookies,
                 userAgent = userAgent,
                 withContentEncoding = withCompression,
-                withLogging = withLogging,
-                sanitizeHeaders = sanitizeHeaders
             )
             apiConfig()
             decorator()
