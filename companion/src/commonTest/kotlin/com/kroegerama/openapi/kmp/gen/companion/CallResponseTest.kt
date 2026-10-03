@@ -1,14 +1,10 @@
 package com.kroegerama.openapi.kmp.gen.companion
 
 import arrow.core.left
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
-import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.headersOf
 import io.ktor.serialization.ContentConvertException
 import kotlinx.coroutines.test.runTest
 import kotlinx.io.IOException
@@ -32,17 +28,7 @@ class CallResponseTest {
     private suspend fun mockResponse(
         status: HttpStatusCode = HttpStatusCode.OK,
         body: String = ""
-    ): HttpResponse {
-        val client = HttpClient(MockEngine) {
-            expectSuccess = false
-            engine {
-                addHandler {
-                    respond(body, status, headersOf(HttpHeaders.ContentType, "application/json"))
-                }
-            }
-        }
-        return client.get("https://example.com/")
-    }
+    ): HttpResponse = plainJsonClient(body, status).get("https://example.com/")
 
     private fun nonHttpExceptions(): List<CallException> = listOf(
         IOCallException(null, IOException("io")),

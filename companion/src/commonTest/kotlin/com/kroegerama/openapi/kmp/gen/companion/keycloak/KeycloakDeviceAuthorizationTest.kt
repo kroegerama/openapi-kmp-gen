@@ -1,8 +1,9 @@
 package com.kroegerama.openapi.kmp.gen.companion.keycloak
 
+import com.kroegerama.openapi.kmp.gen.companion.ApiJson
 import com.kroegerama.openapi.kmp.gen.companion.HttpCallException
 import com.kroegerama.openapi.kmp.gen.companion.UnexpectedCallException
-import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
+import com.kroegerama.openapi.kmp.gen.companion.respondJson
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.toByteArray
 import io.ktor.http.HttpMethod
@@ -331,7 +332,7 @@ class KeycloakDeviceAuthorizationTest {
 
     @Test
     fun deviceAuthorizationSerializationRoundTripAndRedaction() {
-        val json = createDefaultJson()
+        val json = ApiJson
         val authorization = deviceAuthorization().copy(
             obtainedAt = Instant.fromEpochSeconds(1_700_000_000),
             pkce = Pkce("a".repeat(43))

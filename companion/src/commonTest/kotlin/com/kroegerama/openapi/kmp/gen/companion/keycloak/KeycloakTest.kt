@@ -3,9 +3,12 @@ package com.kroegerama.openapi.kmp.gen.companion.keycloak
 import com.kroegerama.openapi.kmp.gen.companion.AuthItem
 import com.kroegerama.openapi.kmp.gen.companion.HttpCallException
 import com.kroegerama.openapi.kmp.gen.companion.UnexpectedCallException
+import com.kroegerama.openapi.kmp.gen.companion.respondJson
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.toByteArray
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.pluginOrNull
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
@@ -1183,5 +1186,27 @@ class KeycloakTest {
         val error = exception.keycloakErrorOrNull()
         assertEquals("invalid_grant", error?.error)
         assertEquals("Invalid user credentials", error?.errorDescription)
+    }
+
+    @Test
+    fun createKeycloakHttpClientInstallsTimeoutsOnAnEngineFactory() {
+        val client = createKeycloakHttpClient(MockEngine) {
+            engine { addHandler { respondJson("{}") } }
+        }
+        try {
+            assertNotNull(client.pluginOrNull(HttpTimeout))
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun createKeycloakHttpClientInstallsTimeoutsOnAnEngineInstance() {
+        val client = createKeycloakHttpClient(MockEngine { respondJson("{}") })
+        try {
+            assertNotNull(client.pluginOrNull(HttpTimeout))
+        } finally {
+            client.close()
+        }
     }
 }

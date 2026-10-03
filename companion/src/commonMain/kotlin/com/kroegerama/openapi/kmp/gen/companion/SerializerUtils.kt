@@ -4,6 +4,7 @@ import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.cookie
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.request.setBody
 import io.ktor.http.appendPathSegments
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.Json
@@ -92,18 +93,16 @@ internal fun serializeForm(
 }
 
 /**
- * Appends [value] to the request URL as a single OpenAPI **simple**-style path segment (see
- * [serializeSimple] for how [explode] affects arrays and objects). `null` and [JsonNull] values are
- * skipped, appending nothing.
+ * Appends [value] to the request URL as one OpenAPI **simple**-style path segment; `null` and [JsonNull] values append nothing.
+ * Generated code composes several segments with [createSerializedPathSegment] instead.
  *
- * This is the [HttpRequestBuilder] counterpart to [createSerializedPathSegment]. Generated code uses
- * [createSerializedPathSegment], which composes several segments into one `url.appendPathSegments(...)`
- * call; this variant is provided for hand-written requests that append a single segment directly.
+ * @param explode renders an object as `k1=v1,k2=v2` instead of `k1,v1,k2,v2`; primitives and arrays are not affected.
+ * @param json the [Json] instance for encoding.
  */
 public inline fun <reified T> HttpRequestBuilder.appendSerializedPathSegment(
     value: T,
     explode: Boolean = false,
-    json: Json = Json
+    json: Json
 ) {
     if (value == null) return
     val content = serializeSimple(json.encodeToJsonElement(value), explode) ?: return
@@ -118,24 +117,31 @@ public inline fun <reified T> HttpRequestBuilder.appendSerializedPathSegment(
  * [SerializableISO8601Instant]. Use this overload to keep the custom serializer:
  *
  * ```kotlin
- * appendSerializedPathSegment(value = instant, serializer = ISO8601InstantSerializer)
+ * appendSerializedPathSegment(value = instant, serializer = ISO8601InstantSerializer, json = Api.json)
  * ```
  */
 public fun <T : Any> HttpRequestBuilder.appendSerializedPathSegment(
     value: T?,
     serializer: SerializationStrategy<T>,
     explode: Boolean = false,
-    json: Json = Json
+    json: Json
 ) {
     if (value == null) return
     val content = serializeSimple(json.encodeToJsonElement(serializer, value), explode) ?: return
     url.appendPathSegments(content)
 }
 
+/**
+ * Serializes [value] as one OpenAPI **simple**-style path segment for `url.appendPathSegments(...)`; `null` yields an empty string.
+ *
+ * ```kotlin
+ * url.appendPathSegments("photos", createSerializedPathSegment(value = id, json = Api.json))
+ * ```
+ */
 public inline fun <reified T> createSerializedPathSegment(
     value: T,
     explode: Boolean = false,
-    json: Json = Json
+    json: Json
 ): String {
     if (value == null) return ""
     return serializeSimple(json.encodeToJsonElement(value), explode).orEmpty()
@@ -149,7 +155,7 @@ public fun <T : Any> createSerializedPathSegment(
     value: T?,
     serializer: SerializationStrategy<T>,
     explode: Boolean = false,
-    json: Json = Json
+    json: Json
 ): String {
     if (value == null) return ""
     return serializeSimple(json.encodeToJsonElement(serializer, value), explode).orEmpty()
@@ -159,7 +165,7 @@ public inline fun <reified T> HttpRequestBuilder.appendSerializedQueryParameter(
     name: String,
     value: T,
     explode: Boolean = true,
-    json: Json = Json
+    json: Json
 ) {
     if (value == null) return
     serializeForm(name, json.encodeToJsonElement(value), explode) { key, content ->
@@ -176,7 +182,7 @@ public fun <T : Any> HttpRequestBuilder.appendSerializedQueryParameter(
     value: T?,
     serializer: SerializationStrategy<T>,
     explode: Boolean = true,
-    json: Json = Json
+    json: Json
 ) {
     if (value == null) return
     serializeForm(name, json.encodeToJsonElement(serializer, value), explode) { key, content ->
@@ -188,7 +194,7 @@ public inline fun <reified T> HttpRequestBuilder.appendSerializedHeaderParameter
     name: String,
     value: T,
     explode: Boolean = false,
-    json: Json = Json
+    json: Json
 ) {
     if (value == null) return
     val content = serializeSimple(json.encodeToJsonElement(value), explode) ?: return
@@ -204,7 +210,7 @@ public fun <T : Any> HttpRequestBuilder.appendSerializedHeaderParameter(
     value: T?,
     serializer: SerializationStrategy<T>,
     explode: Boolean = false,
-    json: Json = Json
+    json: Json
 ) {
     if (value == null) return
     val content = serializeSimple(json.encodeToJsonElement(serializer, value), explode) ?: return
@@ -215,7 +221,7 @@ public inline fun <reified T> HttpRequestBuilder.appendSerializedCookieParameter
     name: String,
     value: T,
     explode: Boolean = true,
-    json: Json = Json
+    json: Json
 ) {
     if (value == null) return
     serializeForm(name, json.encodeToJsonElement(value), explode) { key, content ->
@@ -232,7 +238,7 @@ public fun <T : Any> HttpRequestBuilder.appendSerializedCookieParameter(
     value: T?,
     serializer: SerializationStrategy<T>,
     explode: Boolean = true,
-    json: Json = Json
+    json: Json
 ) {
     if (value == null) return
     serializeForm(name, json.encodeToJsonElement(serializer, value), explode) { key, content ->
@@ -253,4 +259,19 @@ public fun <T : Any> Json.encodeNullableToJsonElement(
 ): JsonElement {
     if (value == null) return JsonNull
     return encodeToJsonElement(serializer, value)
+}
+
+/**
+ * Sets the request body to [value] encoded with an explicit [serializer]; a `null` value is sent as JSON `null`.
+ *
+ * ```kotlin
+ * setSerializedBody(value = instant, serializer = ISO8601InstantSerializer, json = Api.json)
+ * ```
+ */
+public fun <T : Any> HttpRequestBuilder.setSerializedBody(
+    value: T?,
+    serializer: SerializationStrategy<T>,
+    json: Json
+) {
+    setBody(json.encodeNullableToJsonElement(serializer, value))
 }

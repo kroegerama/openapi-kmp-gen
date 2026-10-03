@@ -3,10 +3,15 @@ package com.kroegerama.openapi.kmp.gen.companion
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
+import io.ktor.http.Cookie
+import io.ktor.http.DEFAULT_PORT
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.URLBuilder
+import io.ktor.http.renderCookieHeader
 import io.ktor.util.*
 import io.ktor.util.logging.KtorSimpleLogger
+import io.ktor.util.pipeline.PipelinePhase
 import io.ktor.utils.io.*
 
 public typealias AuthItemResolver = suspend (String) -> AuthItem?
@@ -20,6 +25,8 @@ public typealias AuthItemResolver = suspend (String) -> AuthItem?
  *
  * The handler is only consulted for requests that declared [AuthPlugin.Plugin.authKeys],
  * and at most once per request: a 401 on the retried request is returned to the caller.
+ * A 401 from another origin than the one the request was built for, reached through a
+ * redirect, is returned without consulting the handler.
  * The retry re-sends the request body, so it must be replayable; a streaming body (e.g. a
  * `ByteReadChannel`) arrives consumed on the retry.
  */
@@ -28,7 +35,8 @@ public typealias UnauthorizedHandler = suspend (appliedItems: Map<String, AuthIt
 /**
  * Applies the [AuthItem]s resolved for a request's [Plugin.authKeys]. When an
  * [UnauthorizedHandler] is configured via [Config.onUnauthorized], a 401 Unauthorized
- * response additionally triggers a single retry with re-resolved auth values.
+ * response additionally triggers a single retry with re-resolved auth values. The items are
+ * only sent to the origin (scheme, host and port) the request was built for.
  */
 public class AuthPlugin private constructor(
     private val authItemResolver: AuthItemResolver,
@@ -63,16 +71,8 @@ public class AuthPlugin private constructor(
         authKeys.forEach { authKey ->
             val authItem = authItemResolver(authKey) ?: return@forEach
             applied[authKey] = authItem
-            when (authItem) {
-                is AuthItem.ApiKey -> when (authItem.position) {
-                    AuthItem.Position.Header -> request.header(authItem.name, authItem.value)
-                    AuthItem.Position.Query -> request.parameter(authItem.name, authItem.value)
-                    AuthItem.Position.Cookie -> request.cookie(authItem.name, authItem.value)
-                }
-
-                is AuthItem.Basic -> request.basicAuth(authItem.username, authItem.password)
-                is AuthItem.Bearer -> request.bearerAuth(authItem.token)
-            }
+            // cookies are added by the send pipeline
+            request.setAuthItem(authItem, cookies = false)
         }
         return applied
     }
@@ -81,6 +81,16 @@ public class AuthPlugin private constructor(
         private val LOGGER = KtorSimpleLogger("com.kroegerama.openapi.kmp.gen.companion.AuthPlugin")
         private val authKeysAttribute: AttributeKey<List<String>> = AttributeKey<List<String>>("kgen.auth.keys")
         private val appliedItemsAttribute: AttributeKey<Map<String, AuthItem>> = AttributeKey("kgen.auth.applied")
+        private val appliedOriginAttribute: AttributeKey<Origin> = AttributeKey("kgen.auth.origin")
+        private val AuthOriginPhase = PipelinePhase("AuthOrigin")
+
+        private data class Origin(val scheme: String, val host: String, val port: Int)
+
+        private fun URLBuilder.origin(): Origin = Origin(
+            scheme = protocol.name,
+            host = host.lowercase(),
+            port = port.takeUnless { it == DEFAULT_PORT } ?: protocol.defaultPort
+        )
 
         public fun HttpRequestBuilder.authKeys(vararg keys: String) {
             attributes[authKeysAttribute] = keys.toList()
@@ -97,7 +107,20 @@ public class AuthPlugin private constructor(
             scope.requestPipeline.intercept(HttpRequestPipeline.State) {
                 val authKeys = context.attributes.getOrNull(authKeysAttribute) ?: return@intercept
                 LOGGER.trace("Adding auth values for: $authKeys")
+                context.attributes.put(appliedOriginAttribute, context.url.origin())
                 context.attributes.put(appliedItemsAttribute, plugin.applyAuth(context, authKeys))
+            }
+            // HttpCookies rewrites the Cookie header on every send and HttpRedirect copies the request for each hop, so the applied
+            // items are set again after HttpSendPipeline.State for the applied origin and removed for another one.
+            scope.sendPipeline.insertPhaseAfter(HttpSendPipeline.State, AuthOriginPhase)
+            scope.sendPipeline.intercept(AuthOriginPhase) {
+                val items = context.attributes.getOrNull(appliedItemsAttribute)?.values
+                if (items.isNullOrEmpty()) return@intercept
+                if (context.isSentToAppliedOrigin()) {
+                    items.forEach { context.setAuthItem(it, cookies = true) }
+                } else {
+                    context.removeAuthItemsForAnotherOrigin(items)
+                }
             }
             val handler = plugin.unauthorizedHandler ?: return
             // Ktor installs HttpCallValidator before user plugins, which makes its send
@@ -108,6 +131,7 @@ public class AuthPlugin private constructor(
                 val call = execute(request)
                 if (call.response.status != HttpStatusCode.Unauthorized) return@intercept call
                 val authKeys = request.attributes.getOrNull(authKeysAttribute) ?: return@intercept call
+                if (!request.isSentToAppliedOrigin()) return@intercept call
                 val applied = request.attributes.getOrNull(appliedItemsAttribute).orEmpty()
                 if (!handler(applied)) return@intercept call
                 LOGGER.trace("Retrying after 401 with fresh auth values for: $authKeys")
@@ -129,11 +153,57 @@ public class AuthPlugin private constructor(
             }
         }
 
+        /**
+         * Sets the request values for [item], replacing values of the same name.
+         *
+         * @param cookies whether a cookie-positioned item is merged into the Cookie header or skipped.
+         */
+        private fun HttpRequestBuilder.setAuthItem(item: AuthItem, cookies: Boolean) {
+            when (item) {
+                is AuthItem.ApiKey -> when (item.position) {
+                    AuthItem.Position.Header -> headers[item.name] = item.value
+                    AuthItem.Position.Query -> url.parameters[item.name] = item.value
+                    AuthItem.Position.Cookie -> if (cookies) {
+                        removeCookie(item.name)
+                        cookie(item.name, item.value)
+                    }
+                }
+
+                is AuthItem.Basic -> {
+                    headers.remove(HttpHeaders.Authorization)
+                    basicAuth(item.username, item.password)
+                }
+
+                is AuthItem.Bearer -> {
+                    headers.remove(HttpHeaders.Authorization)
+                    bearerAuth(item.token)
+                }
+            }
+        }
+
+        private fun HttpRequestBuilder.isSentToAppliedOrigin(): Boolean = attributes.getOrNull(appliedOriginAttribute) == url.origin()
+
+        /** Removes the request values applied for [items], keeping cookies of the same name with another value. */
+        private fun HttpRequestBuilder.removeAuthItemsForAnotherOrigin(items: Collection<AuthItem>) {
+            items.forEach { item ->
+                if (item is AuthItem.ApiKey && item.position == AuthItem.Position.Cookie) {
+                    val rendered = renderCookieHeader(Cookie(item.name, item.value))
+                    removeCookies { it == rendered }
+                } else {
+                    removeAuthItem(item)
+                }
+            }
+        }
+
         private fun HttpRequestBuilder.removeCookie(name: String) {
+            removeCookies { it.substringBefore('=') == name }
+        }
+
+        private inline fun HttpRequestBuilder.removeCookies(predicate: (String) -> Boolean) {
             // Request cookies live in a single Cookie header, joined with "; " by
             // HttpMessageBuilder.cookie - other cookies in it must survive the removal.
             val cookieHeader = headers[HttpHeaders.Cookie] ?: return
-            val remaining = cookieHeader.split("; ").filterNot { it.substringBefore('=') == name }
+            val remaining = cookieHeader.split("; ").filterNot(predicate)
             if (remaining.isEmpty()) {
                 headers.remove(HttpHeaders.Cookie)
             } else {

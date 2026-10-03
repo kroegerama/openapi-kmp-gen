@@ -383,22 +383,11 @@ class PoetGenerator(
         } else {
             null
         }
-        when {
-            serializer == null -> addStatement("%M(body)", PoetMembers.RequestSetBody)
+        if (serializer == null) {
+            addStatement("%M(body)", PoetMembers.RequestSetBody)
+        } else {
             // a required nullable body sends a JSON null
-            body.nullable -> addStatement(
-                "%M(%T.json.%M(serializer = %L, value = body))",
-                PoetMembers.RequestSetBody,
-                types.api,
-                PoetMembers.EncodeNullableToJsonElement,
-                serializer
-            )
-            else -> addStatement(
-                "%M(%T.json.encodeToJsonElement(serializer = %L, value = body))",
-                PoetMembers.RequestSetBody,
-                types.api,
-                serializer
-            )
+            addStatement("%M(value = body, serializer = %L, json = %T.json)", PoetMembers.SetSerializedBody, serializer, types.api)
         }
     }
 

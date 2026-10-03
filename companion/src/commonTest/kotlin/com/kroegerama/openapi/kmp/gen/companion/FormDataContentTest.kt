@@ -39,7 +39,7 @@ class FormDataContentTest {
 
     @Test
     fun formDataEncodesPrimitives() {
-        val content = Form(name = "Alice", age = 30).asFormDataContent()
+        val content = Form(name = "Alice", age = 30).asFormDataContent(ApiJson)
         assertEquals("Alice", content.formData["name"])
         assertEquals("30", content.formData["age"])
     }
@@ -47,20 +47,20 @@ class FormDataContentTest {
     @Test
     fun formDataStringsAreUnquoted() {
         // JsonPrimitive.content is used, so string values must not carry JSON quotes
-        val content = Form(name = "Alice", age = 30).asFormDataContent()
+        val content = Form(name = "Alice", age = 30).asFormDataContent(ApiJson)
         assertEquals("Alice", content.formData["name"])
     }
 
     @Test
     fun formDataSkipsNulls() {
-        val content = Form(name = "Alice", age = 30, nickname = null).asFormDataContent()
+        val content = Form(name = "Alice", age = 30, nickname = null).asFormDataContent(ApiJson)
         assertNull(content.formData["nickname"])
         assertFalse("nickname" in content.formData.names())
     }
 
     @Test
     fun formDataNestedValuesFallBackToJson() {
-        val content = Nested(id = 1, tags = listOf("a", "b")).asFormDataContent()
+        val content = Nested(id = 1, tags = listOf("a", "b")).asFormDataContent(ApiJson)
         assertEquals("1", content.formData["id"])
         // arrays/objects are not JsonPrimitive -> toString() yields JSON text
         assertEquals("[\"a\",\"b\"]", content.formData["tags"])
@@ -70,20 +70,20 @@ class FormDataContentTest {
     fun formDataThrowsForNonObject() {
         // a bare primitive does not encode to a JsonObject -> the jsonObject cast fails
         assertFailsWith<IllegalArgumentException> {
-            42.asFormDataContent()
+            42.asFormDataContent(ApiJson)
         }
     }
 
     @Test
     fun multiPartThrowsForNonObject() {
         assertFailsWith<IllegalArgumentException> {
-            "plain".asMultiPartFormDataContent()
+            "plain".asMultiPartFormDataContent(ApiJson)
         }
     }
 
     @Test
     fun multiPartConstructsForObject() {
-        val content = Form(name = "Alice", age = 30).asMultiPartFormDataContent()
+        val content = Form(name = "Alice", age = 30).asMultiPartFormDataContent(ApiJson)
         assertTrue(content.contentType.toString().startsWith("multipart/form-data"))
     }
 
@@ -99,7 +99,7 @@ class FormDataContentTest {
             }
         }
         client.post("https://example.com/upload") {
-            setBody(Form(name = "Alice", age = 30).asMultiPartFormDataContent())
+            setBody(Form(name = "Alice", age = 30).asMultiPartFormDataContent(ApiJson))
         }
         client.close()
 
@@ -112,11 +112,34 @@ class FormDataContentTest {
 
     @Test
     fun formDataUsesProvidedJson() {
-        // the default Json omits defaulted properties; a caller-provided Json controls encoding
-        val default = WithDefault(name = "Alice").asFormDataContent()
-        assertNull(default.formData["role"])
-
-        val withDefaults = WithDefault(name = "Alice").asFormDataContent(Json { encodeDefaults = true })
+        // ApiJson encodes defaulted properties, a Json without encodeDefaults omits them
+        val withDefaults = WithDefault(name = "Alice").asFormDataContent(ApiJson)
         assertEquals("user", withDefaults.formData["role"])
+
+        val withoutDefaults = WithDefault(name = "Alice").asFormDataContent(Json { encodeDefaults = false })
+        assertNull(withoutDefaults.formData["role"])
+    }
+
+    @Test
+    fun multiPartUsesProvidedJson() = runTest {
+        var body = ""
+        val client = HttpClient(MockEngine) {
+            engine {
+                addHandler { request ->
+                    body = request.body.toByteArray().decodeToString()
+                    respond("ok")
+                }
+            }
+        }
+        try {
+            client.post("https://example.com/upload") {
+                setBody(Person("Ada").asMultiPartFormDataContent(snakeCaseJson))
+            }
+        } finally {
+            client.close()
+        }
+
+        assertTrue("""name="first_name"""" in body, body)
+        assertTrue("Ada" in body, body)
     }
 }

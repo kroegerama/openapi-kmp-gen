@@ -114,7 +114,7 @@ object PoetMembers {
     val MapSerializer = MemberName(KTX_SERIALIZATION_BUILTINS, "MapSerializer")
     val BuiltinSerializer = MemberName(KTX_SERIALIZATION_BUILTINS, "serializer")
     val NullableSerializer = MemberName(KTX_SERIALIZATION_BUILTINS, "nullable")
-    val EncodeNullableToJsonElement = MemberName(COMPANION_PACKAGE, "encodeNullableToJsonElement")
+    val SetSerializedBody = MemberName(COMPANION_PACKAGE, "setSerializedBody")
     val EitherRequest = MemberName(COMPANION_PACKAGE, "eitherRequest")
     val AppendSerializedQueryParameter = MemberName(COMPANION_PACKAGE, "appendSerializedQueryParameter")
     val AppendSerializedHeaderParameter = MemberName(COMPANION_PACKAGE, "appendSerializedHeaderParameter")

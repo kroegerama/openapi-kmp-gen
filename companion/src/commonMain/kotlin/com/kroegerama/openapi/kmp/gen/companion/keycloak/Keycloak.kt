@@ -5,20 +5,22 @@ import arrow.core.flatMap
 import arrow.core.getOrElse
 import arrow.core.left
 import arrow.core.right
+import com.kroegerama.openapi.kmp.gen.companion.ApiJson
 import com.kroegerama.openapi.kmp.gen.companion.AuthItem
 import com.kroegerama.openapi.kmp.gen.companion.CallException
 import com.kroegerama.openapi.kmp.gen.companion.HttpCallException
+import com.kroegerama.openapi.kmp.gen.companion.PlatformHttpClientEngineFactory
 import com.kroegerama.openapi.kmp.gen.companion.PlatformHttpClientEngineConfig
 import com.kroegerama.openapi.kmp.gen.companion.UnauthorizedHandler
 import com.kroegerama.openapi.kmp.gen.companion.UnexpectedCallException
-import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
-import com.kroegerama.openapi.kmp.gen.companion.createPlatformHttpClient
-import com.kroegerama.openapi.kmp.gen.companion.defaultConfig
+import com.kroegerama.openapi.kmp.gen.companion.createApiHttpClient
 import com.kroegerama.openapi.kmp.gen.companion.eitherRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
+import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.engine.HttpClientEngineConfig
+import io.ktor.client.engine.HttpClientEngineFactory
 import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.header
 import io.ktor.client.request.setBody
@@ -30,7 +32,6 @@ import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import io.ktor.http.parameters
 import io.ktor.http.takeFrom
-import io.ktor.serialization.kotlinx.json.json
 import io.ktor.util.generateNonceSuspend
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.BufferOverflow
@@ -91,30 +92,60 @@ public enum class KeycloakSessionEndReason {
 }
 
 /**
- * Creates the lightweight [HttpClient] used by [Keycloak] by default: the library's
- * [defaultConfig] plus JSON content negotiation and conservative [HttpTimeout] limits.
- * The timeouts matter because token requests run while [Keycloak]'s internal lock is
- * held - a hung request would otherwise stall every call waiting for a bearer token.
- * Intentionally separate from any [com.kroegerama.openapi.kmp.gen.companion.ApiHolder]
- * client, so token requests never pass through the API's auth plugin or default request
- * configuration.
+ * Creates the [HttpClient] used by [Keycloak] by default: a [createApiHttpClient] on the [PlatformHttpClientEngineFactory] with [HttpTimeout]
+ * limits, so a hung token request cannot stall the calls waiting for a bearer token.
  *
- * @param decorator additional configuration, applied last - it may override the defaults,
- *   e.g. re-`install(HttpTimeout)` with different limits.
+ * @param block additional configuration, run after the defaults; the `Json` instance of [createApiHttpClient] stays in place.
  */
 public fun createKeycloakHttpClient(
-    decorator: HttpClientConfig<PlatformHttpClientEngineConfig>.() -> Unit = {}
-): HttpClient = createPlatformHttpClient {
-    defaultConfig()
-    install(ContentNegotiation) {
-        json(createDefaultJson())
-    }
+    block: HttpClientConfig<PlatformHttpClientEngineConfig>.() -> Unit = {}
+): HttpClient = createKeycloakHttpClient(PlatformHttpClientEngineFactory, block)
+
+/**
+ * Creates the [HttpClient] for [Keycloak] on the given engine factory, with the same timeouts and [block] handling as
+ * [createKeycloakHttpClient].
+ *
+ * ```kotlin
+ * val client = createKeycloakHttpClient(MockEngine) {
+ *     engine { addHandler { respond("") } }
+ * }
+ * ```
+ *
+ * @param engine the Ktor engine factory to use instead of the [PlatformHttpClientEngineFactory].
+ */
+public fun <T : HttpClientEngineConfig> createKeycloakHttpClient(
+    engine: HttpClientEngineFactory<T>,
+    block: HttpClientConfig<T>.() -> Unit = {}
+): HttpClient = createApiHttpClient(engine) {
+    installKeycloakTimeouts()
+    block()
+}
+
+/**
+ * Creates the [HttpClient] for [Keycloak] on an existing engine instance, with the same timeouts and [block] handling as
+ * [createKeycloakHttpClient].
+ *
+ * ```kotlin
+ * val engine = MockEngine { respond("") }
+ * val client = createKeycloakHttpClient(engine)
+ * ```
+ *
+ * @param engine the engine instance to use; the client does not own it, so closing the client leaves the engine open.
+ */
+public fun createKeycloakHttpClient(
+    engine: HttpClientEngine,
+    block: HttpClientConfig<*>.() -> Unit = {}
+): HttpClient = createApiHttpClient(engine) {
+    installKeycloakTimeouts()
+    block()
+}
+
+private fun HttpClientConfig<*>.installKeycloakTimeouts() {
     install(HttpTimeout) {
         connectTimeoutMillis = 10_000
         requestTimeoutMillis = 30_000
         socketTimeoutMillis = 30_000
     }
-    decorator()
 }
 
 /**
@@ -964,7 +995,7 @@ public class Keycloak(
  * The client used for discovery is reused by the resulting instance:
  * - A caller-provided [httpClient] is never closed, even on failure - its lifecycle stays
  *   with the caller, so it can be reused across discovery retries. Its `Json` configuration
- *   must ignore unknown keys (like [createDefaultJson]), because discovery documents contain
+ *   must ignore unknown keys (like [ApiJson]), because discovery documents contain
  *   many more fields than the decoded [OpenIdConfiguration] subset.
  * - When [httpClient] is `null`, a [createKeycloakHttpClient] is created for this call: on
  *   success the resulting instance takes it over; on failure - including cancellation - it
@@ -1037,8 +1068,8 @@ public suspend fun Keycloak.Companion.discover(
             if (ownsClient) client.close()
         }
     } catch (throwable: Throwable) {
-        // Fatal exceptions (including CancellationException) are rethrown by the request
-        // instead of surfacing as a Left, so the self-created client must be closed here too.
+        // The request rethrows fatal exceptions and every CancellationException of an open client (caller
+        // cancellation, timeouts) instead of returning a Left, so the self-created client must be closed here too.
         if (ownsClient) client.close()
         throw throwable
     }

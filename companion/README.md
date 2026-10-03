@@ -8,13 +8,16 @@ utilities, and JWT parsing for Kotlin Multiplatform projects.
 ```
 com.kroegerama.openapi.kmp.gen.companion
 ├── ApiHolder.kt              # Abstract base for generated API singletons
-├── ApiDefaults.kt            # Default JSON config, HTTP client factory, user agent
+├── ApiHttpClient.kt          # createApiHttpClient: HttpClient factory with the library defaults
+├── ApiJson.kt                # Shared default Json instance
+├── PlatformEngine.kt         # Default Ktor engine per platform
+├── UserAgent.kt              # Default and platform user agent
 ├── AuthItem.kt               # Sealed interface for auth types (Basic, Bearer, ApiKey)
 ├── AuthPlugin.kt             # Ktor plugin that injects auth into requests
 ├── CallResponse.kt           # Either-based response/error types (Arrow)
 ├── Request.kt                # eitherRequest extension for HttpClient
 ├── Serializers.kt            # KSerializer implementations (Base64, epoch, ISO 8601, ImmutableList)
-├── SerializerUtils.kt        # Parameter serialization helpers (path, query, header, cookie)
+├── SerializerUtils.kt        # Parameter and body serialization helpers (path, query, header, cookie, body)
 ├── FormDataContent.kt        # Helpers to convert @Serializable objects to form data
 ├── JWT.kt                    # JWT parser (no signature validation)
 └── keycloak/
@@ -47,11 +50,57 @@ com.kroegerama.openapi.kmp.gen.companion
 Abstract base class that generated API objects extend (e.g. `object Api : ApiHolder()`). Manages:
 
 - `baseUrl` - server URL, overridable at runtime
-- `json` - kotlinx.serialization `Json` instance (defaults to `createDefaultJson()`)
-- `client` - Ktor `HttpClient`, created lazily on first access and reconfigurable via `updateClient()` (cookies, compression, logging with header
-  sanitizing, custom decorator); the previous client is closed on replacement
+- `json` - kotlinx.serialization `Json` instance of the current client (defaults to `ApiJson`)
+- `client` - Ktor `HttpClient`, created lazily on first access and replaceable via `updateClient()`. Generated service functions and
+  hand-written calls run `eitherRequest` on it and pass `json = Api.json` to every serialization helper:
+
+  ```kotlin
+  Api.client.eitherRequest<Photo> {
+      method = HttpMethod.Get
+      url.appendPathSegments("photos", createSerializedPathSegment(value = id, json = Api.json))
+      appendSerializedQueryParameter(name = "count", value = count, json = Api.json)
+  }
+  ```
+
+  The serialization helpers and the `eitherRequest` overload with an explicit `deserializer` have no default `Json`; the reified
+  `eitherRequest<T>` decodes through the client's content negotiation and takes none.
+
+- `updateClient(json, userAgent) { ... }` - replaces `client` and `json` and closes the previous client. The new client is built on the
+  `PlatformHttpClientEngineFactory` with `createApiHttpClient` (success validation, `User-Agent`, JSON content negotiation) plus the base URL and `AuthPlugin`.
+  An `eitherRequest` started on the previous client afterwards returns an `UnexpectedCallException` without reaching the auth providers
+  or the engine (a plain Ktor call throws `IllegalStateException`); one still running on it completes or returns a `CallException`,
+  depending on the engine and on how far the request got. The block runs after the defaults and installs anything else:
+
+  ```kotlin
+  Api.updateClient {
+      install(HttpCookies)
+      install(ContentEncoding) {
+          mode = ContentEncodingConfig.Mode.All
+          gzip(1f)
+          deflate(0.5f)
+          identity(0f)
+      }
+  }
+  ```
+
+  `ContentEncoding` comes from `io.ktor:ktor-client-encoding`, which the companion does not bring along; add it to your own dependencies.
+  The `Json` instance is set through the `json` parameter; a converter registered in the block does not replace it. `userAgent = null` skips the
+  `UserAgent` plugin, the platform engine then sends Ktor's default `ktor-client`.
+- `updateClient(engineFactory, json, userAgent) { ... }` - same, on another engine factory such as `MockEngine` in tests
+- `updateClient(engine, json, userAgent) { ... }` - same, on an existing `HttpClientEngine` instance. As with Ktor's `HttpClient(engine)`, the
+  client does not own the engine: replacing or closing the client leaves it open, and closing it is up to the caller. The engine must be
+  created by the caller; an engine owned by one of the holder's own clients (`Api.client.engine`) is closed together with that client:
+
+  ```kotlin
+  val engine = MockEngine { respond("") }
+  Api.updateClient(engine)
+  ```
+
 - Auth provider registration via `setAuthProvider(id, provider)` / `clearAuthProvider(id)` - thread-safe (copy-on-write map behind an
   `AtomicReference`), providers registered after client creation are picked up by subsequent requests
+
+`createApiHttpClient` offers the same three overloads (platform engine, engine factory, engine instance) for clients outside an `ApiHolder`, without
+the base URL and `AuthPlugin`.
 
 ### `AuthPlugin`
 
@@ -64,9 +113,16 @@ Supported auth types (`AuthItem`):
 - `Bearer(token)`
 - `ApiKey(position, name, value)` - position: `Header`, `Query`, or `Cookie`
 
+A `Cookie` key is merged into the `Cookie` header when the request is sent, replacing a cookie of the same name. It works with and without
+`HttpCookies`, in either install order, and is never written to the cookie storage.
+
+Auth values are only sent to the origin (scheme, host and port) of the request they were resolved for: a redirect to another origin receives
+none of them and its 401 is returned without a retry, a redirect within the origin keeps them, `Query` keys included.
+
 ### `CallResponse` / `Request`
 
-`eitherRequest<T>` is an `HttpClient` extension that wraps Ktor requests into `Either<CallException, HttpCallResponse<T>>` (Arrow). Error hierarchy:
+`eitherRequest<T>` is an `HttpClient` extension that wraps Ktor requests into `Either<CallException, HttpCallResponse<T>>` (Arrow).
+Error hierarchy:
 
 | Type                         | Cause                        |
 |------------------------------|------------------------------|
@@ -97,10 +153,11 @@ Parameter serialization helpers for generated service methods:
 - `appendSerializedHeaderParameter`
 - `appendSerializedCookieParameter`
 
+All of them take the `Json` instance as a required `json` argument; generated code passes `Api.json` (see `ApiHolder` above).
 Each helper has a reified variant and an overload taking an explicit `serializer`. The explicit
 overload is required for the annotated type aliases above: reified serializer lookup only sees the
 underlying type (`Instant`, `ByteArray`) and would fall back to its builtin serializer.
-`encodeNullableToJsonElement` covers the same case for request bodies, and the `eitherRequest`
+`setSerializedBody` covers the same case for request bodies, and the `eitherRequest`
 overload with an explicit `deserializer` covers response bodies.
 
 `AdditionalPropertiesSerializer` backs classes generated from schemas that combine declared
@@ -125,8 +182,14 @@ data class Pet(
 
 Extension functions to convert any `@Serializable` object to:
 
-- `asFormDataContent()` - URL-encoded form data
-- `asMultiPartFormDataContent()` - multipart form data
+- `asFormDataContent(json)` - URL-encoded form data
+- `asMultiPartFormDataContent(json)` - multipart form data
+
+Both take the `Json` instance to encode with as a required argument:
+
+```kotlin
+val body = form.asFormDataContent(json = Api.json)
+```
 
 ### `JWT`
 
@@ -181,7 +244,6 @@ All dependencies are exposed with `api` scope.
 | `kotlinx-serialization-json`      | common      |
 | `ktor-client-core`                | common      |
 | `ktor-client-content-negotiation` | common      |
-| `ktor-client-encoding`            | common      |
 | `ktor-client-auth`                | common      |
 | `ktor-serialization-kotlinx-json` | common      |
 | `arrow-core`                      | common      |
@@ -198,7 +260,8 @@ The `generated` module demonstrates how the companion library is consumed. The c
 
 1. An `Api` object extending `ApiHolder` with server URLs and auth helpers
 2. `Auth` sealed interface variants mapping OpenAPI security schemes to `AuthItem` types
-3. Service objects (e.g. `DefaultApi`) using `eitherRequest`, `authKeys`, `createSerializedPathSegment`, and `appendSerializedQueryParameter`
+3. Service objects (e.g. `DefaultApi`) using `Api.client.eitherRequest`, `authKeys`, `createSerializedPathSegment`, and
+   `appendSerializedQueryParameter`
 4. Model data classes using `SerializableBase64`, `@Immutable`, etc.
 
 ```kotlin

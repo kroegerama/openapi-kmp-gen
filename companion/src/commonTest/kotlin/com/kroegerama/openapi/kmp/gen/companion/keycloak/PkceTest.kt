@@ -1,6 +1,6 @@
 package com.kroegerama.openapi.kmp.gen.companion.keycloak
 
-import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
+import com.kroegerama.openapi.kmp.gen.companion.ApiJson
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -53,7 +53,7 @@ class PkceTest {
 
     @Test
     fun serializationRoundTrip() = runTest {
-        val json = createDefaultJson()
+        val json = ApiJson
         val pkce = Pkce.generate()
 
         val restored = json.decodeFromString<Pkce>(json.encodeToString(pkce))

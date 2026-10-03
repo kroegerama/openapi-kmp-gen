@@ -11,7 +11,7 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 
 public inline fun <reified T> T.asFormDataContent(
-    json: Json = Json
+    json: Json
 ): FormDataContent {
     val jsonObject = json.encodeToJsonElement(this).jsonObject
     val formData = parameters {
@@ -28,7 +28,7 @@ public inline fun <reified T> T.asFormDataContent(
 }
 
 public inline fun <reified T> T.asMultiPartFormDataContent(
-    json: Json = Json
+    json: Json
 ): MultiPartFormDataContent {
     val jsonObject = json.encodeToJsonElement(this).jsonObject
     val parts = formData {

@@ -2,6 +2,7 @@ package com.kroegerama.openapi.kmp.gen.companion.keycloak
 
 import com.kroegerama.openapi.kmp.gen.companion.HttpCallException
 import com.kroegerama.openapi.kmp.gen.companion.UnexpectedCallException
+import com.kroegerama.openapi.kmp.gen.companion.respondJson
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode

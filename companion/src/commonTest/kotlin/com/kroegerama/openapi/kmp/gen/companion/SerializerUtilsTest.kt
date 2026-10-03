@@ -20,52 +20,60 @@ class SerializerUtilsTest {
     private val color = Color(R = 100, G = 200, B = 150)
 
     @Test
+    fun pathSegmentHonorsExplicitJson() {
+        assertEquals("first_name,Ada", createSerializedPathSegment(Person("Ada"), json = snakeCaseJson))
+    }
+
+    @Test
     fun pathPrimitive() {
-        assertEquals("blue", createSerializedPathSegment("blue"))
-        assertEquals("5", createSerializedPathSegment(5))
+        assertEquals("blue", createSerializedPathSegment("blue", json = ApiJson))
+        assertEquals("5", createSerializedPathSegment(5, json = ApiJson))
     }
 
     @Test
     fun pathArray() {
         // simple style: arrays are comma-joined regardless of explode
-        assertEquals("blue,black,brown", createSerializedPathSegment(listOf("blue", "black", "brown"), explode = false))
-        assertEquals("blue,black,brown", createSerializedPathSegment(listOf("blue", "black", "brown"), explode = true))
+        assertEquals("blue,black,brown", createSerializedPathSegment(listOf("blue", "black", "brown"), explode = false, json = ApiJson))
+        assertEquals("blue,black,brown", createSerializedPathSegment(listOf("blue", "black", "brown"), explode = true, json = ApiJson))
     }
 
     @Test
     fun pathObjectNotExploded() {
         // simple style, explode = false → k1,v1,k2,v2
-        assertEquals("R,100,G,200,B,150", createSerializedPathSegment(color, explode = false))
+        assertEquals("R,100,G,200,B,150", createSerializedPathSegment(color, explode = false, json = ApiJson))
     }
 
     @Test
     fun pathObjectExploded() {
         // simple style, explode = true → k1=v1,k2=v2
-        assertEquals("R=100,G=200,B=150", createSerializedPathSegment(color, explode = true))
+        assertEquals("R=100,G=200,B=150", createSerializedPathSegment(color, explode = true, json = ApiJson))
     }
 
     @Test
     fun pathNull() {
         val nothing: String? = null
-        assertEquals("", createSerializedPathSegment(nothing))
+        assertEquals("", createSerializedPathSegment(nothing, json = ApiJson))
     }
 
     @Test
     fun pathArraySkipsNullElements() {
-        assertEquals("blue,brown", createSerializedPathSegment(listOf("blue", null, "brown")))
+        assertEquals("blue,brown", createSerializedPathSegment(listOf("blue", null, "brown"), json = ApiJson))
     }
 
     @Test
     fun pathObjectWithNullValues() {
-        // default Json writes explicit nulls; simple style renders them as empty values
-        assertEquals("a,,b,1", createSerializedPathSegment(WithNull(a = null, b = 1), explode = false))
-        assertEquals("a=,b=1", createSerializedPathSegment(WithNull(a = null, b = 1), explode = true))
+        // ApiJson omits null properties
+        assertEquals("b,1", createSerializedPathSegment(WithNull(a = null, b = 1), explode = false, json = ApiJson))
+        assertEquals("b=1", createSerializedPathSegment(WithNull(a = null, b = 1), explode = true, json = ApiJson))
+        // a Json with explicit nulls writes them; simple style renders them as empty values
+        assertEquals("a,,b,1", createSerializedPathSegment(WithNull(a = null, b = 1), explode = false, json = Json))
+        assertEquals("a=,b=1", createSerializedPathSegment(WithNull(a = null, b = 1), explode = true, json = Json))
     }
 
     @Test
     fun appendPathSegmentAppendsToUrl() {
         val builder = HttpRequestBuilder()
-        builder.appendSerializedPathSegment(listOf("blue", "black"))
+        builder.appendSerializedPathSegment(listOf("blue", "black"), json = ApiJson)
         assertEquals("blue,black", builder.url.pathSegments.last())
     }
 
@@ -93,10 +101,10 @@ class SerializerUtilsTest {
     fun nullValuesAreSkippedEverywhere() {
         val builder = HttpRequestBuilder()
         val nothing: String? = null
-        builder.appendSerializedPathSegment(nothing)
-        builder.appendSerializedQueryParameter("q", nothing)
-        builder.appendSerializedHeaderParameter("X-Q", nothing)
-        builder.appendSerializedCookieParameter("c", nothing)
+        builder.appendSerializedPathSegment(nothing, json = ApiJson)
+        builder.appendSerializedQueryParameter("q", nothing, json = ApiJson)
+        builder.appendSerializedHeaderParameter("X-Q", nothing, json = ApiJson)
+        builder.appendSerializedCookieParameter("c", nothing, json = ApiJson)
         assertEquals(emptyList(), builder.url.pathSegments.filter { it.isNotEmpty() })
         assertNull(builder.url.parameters["q"])
         assertNull(builder.headers["X-Q"])
@@ -106,8 +114,8 @@ class SerializerUtilsTest {
     @Test
     fun headerPrimitiveAndArray() {
         val builder = HttpRequestBuilder()
-        builder.appendSerializedHeaderParameter("X-P", "v")
-        builder.appendSerializedHeaderParameter("X-A", listOf("a", "b"))
+        builder.appendSerializedHeaderParameter("X-P", "v", json = ApiJson)
+        builder.appendSerializedHeaderParameter("X-A", listOf("a", "b"), json = ApiJson)
         assertEquals("v", builder.headers["X-P"])
         assertEquals("a,b", builder.headers["X-A"])
     }
@@ -115,21 +123,21 @@ class SerializerUtilsTest {
     @Test
     fun queryPrimitive() {
         val builder = HttpRequestBuilder()
-        builder.appendSerializedQueryParameter("q", 5)
+        builder.appendSerializedQueryParameter("q", 5, json = ApiJson)
         assertEquals("5", builder.url.parameters["q"])
     }
 
     @Test
     fun queryArrayExplodedSkipsNullElements() {
         val builder = HttpRequestBuilder()
-        builder.appendSerializedQueryParameter("c", listOf("blue", null), explode = true)
+        builder.appendSerializedQueryParameter("c", listOf("blue", null), explode = true, json = ApiJson)
         assertEquals(listOf("blue"), builder.url.parameters.getAll("c"))
     }
 
     @Test
     fun headerObjectSharesSimpleStyle() {
         val builder = HttpRequestBuilder()
-        builder.appendSerializedHeaderParameter("X-Color", color, explode = true)
+        builder.appendSerializedHeaderParameter("X-Color", color, explode = true, json = ApiJson)
         assertEquals("R=100,G=200,B=150", builder.headers["X-Color"])
     }
 
@@ -137,7 +145,7 @@ class SerializerUtilsTest {
     fun queryArrayExploded() {
         // form style, explode = true → one parameter per item
         val builder = HttpRequestBuilder()
-        builder.appendSerializedQueryParameter("c", listOf("blue", "black", "brown"), explode = true)
+        builder.appendSerializedQueryParameter("c", listOf("blue", "black", "brown"), explode = true, json = ApiJson)
         assertEquals(listOf("blue", "black", "brown"), builder.url.parameters.getAll("c"))
     }
 
@@ -145,7 +153,7 @@ class SerializerUtilsTest {
     fun queryArrayNotExploded() {
         // form style, explode = false → single comma-joined parameter
         val builder = HttpRequestBuilder()
-        builder.appendSerializedQueryParameter("c", listOf("blue", "black", "brown"), explode = false)
+        builder.appendSerializedQueryParameter("c", listOf("blue", "black", "brown"), explode = false, json = ApiJson)
         assertEquals("blue,black,brown", builder.url.parameters["c"])
     }
 
@@ -153,7 +161,7 @@ class SerializerUtilsTest {
     fun queryObjectExploded() {
         // form style, explode = true → one parameter per property, keyed by property name; `name` dropped
         val builder = HttpRequestBuilder()
-        builder.appendSerializedQueryParameter("color", color, explode = true)
+        builder.appendSerializedQueryParameter("color", color, explode = true, json = ApiJson)
         val params = builder.url.parameters
         assertEquals("100", params["R"])
         assertEquals("200", params["G"])
@@ -165,7 +173,7 @@ class SerializerUtilsTest {
     fun queryObjectNotExploded() {
         // form style, explode = false → single parameter `name=k1,v1,k2,v2`
         val builder = HttpRequestBuilder()
-        builder.appendSerializedQueryParameter("color", color, explode = false)
+        builder.appendSerializedQueryParameter("color", color, explode = false, json = ApiJson)
         assertEquals("R,100,G,200,B,150", builder.url.parameters["color"])
     }
 
@@ -173,7 +181,7 @@ class SerializerUtilsTest {
     fun cookieObjectExploded() {
         // form style, explode = true → one cookie per property, keyed by property name
         val builder = HttpRequestBuilder()
-        builder.appendSerializedCookieParameter("color", color, explode = true)
+        builder.appendSerializedCookieParameter("color", color, explode = true, json = ApiJson)
         val cookieHeader = builder.headers["Cookie"].orEmpty()
         assertTrue(cookieHeader.contains("R=100"), cookieHeader)
         assertTrue(cookieHeader.contains("G=200"), cookieHeader)
@@ -185,7 +193,7 @@ class SerializerUtilsTest {
         // form style, explode = false → a single cookie under `name` (not raw JSON).
         // Ktor URL-encodes the comma-joined value in the Cookie header, so assert structurally.
         val builder = HttpRequestBuilder()
-        builder.appendSerializedCookieParameter("color", color, explode = false)
+        builder.appendSerializedCookieParameter("color", color, explode = false, json = ApiJson)
         val cookieHeader = builder.headers["Cookie"].orEmpty()
         assertTrue(cookieHeader.startsWith("color=R"), cookieHeader)
         assertTrue(!cookieHeader.contains("{"), cookieHeader)

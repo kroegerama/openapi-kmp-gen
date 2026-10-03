@@ -138,7 +138,7 @@ class AdditionalPropertiesSerializerTest {
         val additionalProperties: String = "",
     )
 
-    private val json = createDefaultJson()
+    private val json = ApiJson
 
     @Test
     fun extraKeysAreCapturedAndReEmitted() {

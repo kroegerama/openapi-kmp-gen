@@ -1,7 +1,7 @@
 package com.kroegerama.openapi.kmp.gen.companion.keycloak
 
+import com.kroegerama.openapi.kmp.gen.companion.ApiJson
 import com.kroegerama.openapi.kmp.gen.companion.UnexpectedCallException
-import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.http.Url
 import kotlinx.coroutines.CoroutineStart
@@ -203,7 +203,7 @@ class KeycloakLogoutTest {
 
     @Test
     fun logoutRequestSerializationRoundTrip() = runTest {
-        val json = createDefaultJson()
+        val json = ApiJson
         val request = createRequest()
 
         val restored = json.decodeFromString<LogoutRequest>(json.encodeToString(request))

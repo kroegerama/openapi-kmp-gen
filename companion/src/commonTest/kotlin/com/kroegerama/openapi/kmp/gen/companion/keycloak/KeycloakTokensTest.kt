@@ -1,6 +1,6 @@
 package com.kroegerama.openapi.kmp.gen.companion.keycloak
 
-import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
+import com.kroegerama.openapi.kmp.gen.companion.ApiJson
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -13,7 +13,7 @@ import kotlin.time.Instant
 
 class KeycloakTokensTest {
 
-    private val json = createDefaultJson()
+    private val json = ApiJson
 
     @Test
     fun decodeRealisticResponseDefaultsObtainedAt() {
