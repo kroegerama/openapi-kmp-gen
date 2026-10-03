@@ -5,7 +5,7 @@ import com.kroegerama.kmp.gen.generated31.models.ExtendedPhoto
 import com.kroegerama.kmp.gen.generated31.models.MergedNullableMember
 import com.kroegerama.kmp.gen.generated31.models.MergedRequiredTest
 import com.kroegerama.kmp.gen.generated31.models.NullableExtendedPhoto
-import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
+import com.kroegerama.openapi.kmp.gen.companion.ApiJson
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -15,7 +15,7 @@ import kotlin.test.assertEquals
  */
 class MergedObjectDecodingTest {
 
-    private val json = createDefaultJson()
+    private val json = ApiJson
 
     @Test
     fun extendedPhotoDecodesBaseAndSiblingProperties() {

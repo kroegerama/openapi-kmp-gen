@@ -6,7 +6,7 @@
  * Version 1.0.0-SNAPSHOT
  * 
  * Generated Mon, 1 Jun 2026 13:00:00 GMT
- * OpenAPI KMP Gen (version 1.6.1) by kroegerama
+ * OpenAPI KMP Gen (version 1.7.0-rc01) by kroegerama
  */
 @file:Suppress("ArrayInDataClass", "RedundantVisibilityModifier", "unused", "ConstPropertyName")
 
@@ -39,6 +39,7 @@ import com.kroegerama.openapi.kmp.gen.`companion`.appendSerializedHeaderParamete
 import com.kroegerama.openapi.kmp.gen.`companion`.appendSerializedQueryParameter
 import com.kroegerama.openapi.kmp.gen.`companion`.createSerializedPathSegment
 import com.kroegerama.openapi.kmp.gen.`companion`.eitherRequest
+import com.kroegerama.openapi.kmp.gen.`companion`.setSerializedBody
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.forms.MultiPartFormDataContent
@@ -352,7 +353,7 @@ public object DefaultApi {
       "instantBody",
     )
     contentType(ContentType.Application.Json)
-    setBody(Api.json.encodeToJsonElement(serializer = ISO8601InstantSerializer, value = body))
+    setSerializedBody(value = body, serializer = ISO8601InstantSerializer, json = Api.json)
     decorator()
   }
 
@@ -385,7 +386,7 @@ public object DefaultApi {
     )
     if (body != null) {
       contentType(ContentType.Application.Json)
-      setBody(Api.json.encodeToJsonElement(serializer = ISO8601InstantSerializer, value = body))
+      setSerializedBody(value = body, serializer = ISO8601InstantSerializer, json = Api.json)
     }
     decorator()
   }

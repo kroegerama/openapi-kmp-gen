@@ -1,7 +1,7 @@
 package com.kroegerama.kmp.gen.generated31
 
 import com.kroegerama.kmp.gen.generated31.models.SerialTest
-import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
+import com.kroegerama.openapi.kmp.gen.companion.ApiJson
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.serialization.json.jsonObject
@@ -15,7 +15,7 @@ import kotlin.uuid.Uuid
 
 class SerialFormatsRoundTripTest {
 
-    private val json = createDefaultJson()
+    private val json = ApiJson
 
     @Test
     fun allFormatsDecodeFromIsoStrings() {

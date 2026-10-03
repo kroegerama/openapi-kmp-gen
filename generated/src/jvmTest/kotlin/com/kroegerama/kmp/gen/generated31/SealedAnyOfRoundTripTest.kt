@@ -8,7 +8,7 @@ import com.kroegerama.kmp.gen.generated31.models.DeleteEventNotification
 import com.kroegerama.kmp.gen.generated31.models.EventNotification
 import com.kroegerama.kmp.gen.generated31.models.NullableEventNotification
 import com.kroegerama.kmp.gen.generated31.models.UpdateActionResponse
-import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
+import com.kroegerama.openapi.kmp.gen.companion.ApiJson
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
@@ -16,7 +16,7 @@ import kotlin.test.assertEquals
 
 class SealedAnyOfRoundTripTest {
 
-    private val json = createDefaultJson()
+    private val json = ApiJson
 
     private inline fun <reified T> roundTrip(value: T, expectedKind: String) {
         val encoded = json.encodeToString(value)

@@ -9,7 +9,7 @@ import com.kroegerama.kmp.gen.generated31.models.SealedClass1Child2
 import com.kroegerama.kmp.gen.generated31.models.SealedClass2
 import com.kroegerama.kmp.gen.generated31.models.SealedClass2Child1
 import com.kroegerama.kmp.gen.generated31.models.SealedClass2Child2
-import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
+import com.kroegerama.openapi.kmp.gen.companion.ApiJson
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
@@ -18,7 +18,7 @@ import kotlin.test.assertNull
 
 class SealedOneOfRoundTripTest {
 
-    private val json = createDefaultJson()
+    private val json = ApiJson
 
     private inline fun <reified T> roundTrip(value: T, discriminatorProperty: String, expectedDiscriminator: String) {
         val encoded = json.encodeToString(value)

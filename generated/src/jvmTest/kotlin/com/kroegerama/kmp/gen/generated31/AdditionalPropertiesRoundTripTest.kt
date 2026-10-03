@@ -32,7 +32,7 @@ import com.kroegerama.kmp.gen.generated31.models.TypedHybrid
 import com.kroegerama.kmp.gen.generated31.models.UntaggedHybridA
 import com.kroegerama.kmp.gen.generated31.models.UntaggedHybridB
 import com.kroegerama.kmp.gen.generated31.models.UntaggedHybridUnion
-import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
+import com.kroegerama.openapi.kmp.gen.companion.ApiJson
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
@@ -54,7 +54,7 @@ import kotlin.time.Instant
 
 class AdditionalPropertiesRoundTripTest {
 
-    private val json = createDefaultJson()
+    private val json = ApiJson
     private val strictJson = Json(json) { ignoreUnknownKeys = false }
 
     private inline fun <reified T> assertRoundTrip(value: T) {

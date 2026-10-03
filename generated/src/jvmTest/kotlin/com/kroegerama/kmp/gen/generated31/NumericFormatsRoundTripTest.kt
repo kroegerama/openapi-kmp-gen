@@ -2,13 +2,13 @@ package com.kroegerama.kmp.gen.generated31
 
 import com.kroegerama.kmp.gen.generated31.models.IntegerTest
 import com.kroegerama.kmp.gen.generated31.models.NumberTest
-import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
+import com.kroegerama.openapi.kmp.gen.companion.ApiJson
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class NumericFormatsRoundTripTest {
 
-    private val json = createDefaultJson()
+    private val json = ApiJson
 
     @Test
     fun integerFormatsDecodeToExpectedTypes() {

@@ -6,20 +6,20 @@ import com.kroegerama.kmp.gen.generated31.models.DefaultValue
 import com.kroegerama.kmp.gen.generated31.models.IntegerTest
 import com.kroegerama.kmp.gen.generated31.models.NumberTest
 import com.kroegerama.kmp.gen.generated31.models.Photo
-import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
+import com.kroegerama.openapi.kmp.gen.companion.ApiJson
 import kotlinx.serialization.json.jsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Verifies the behavior of the [createDefaultJson] configuration used by the generated APIs
+ * Verifies the behavior of the [ApiJson] configuration used by the generated APIs
  * at runtime: `ignoreUnknownKeys`, `explicitNulls = false`, `encodeDefaults = true`,
  * `coerceInputValues`, `isLenient` and `allowSpecialFloatingPointValues`.
  */
-class DefaultJsonBehaviorTest {
+class ApiJsonBehaviorTest {
 
-    private val json = createDefaultJson()
+    private val json = ApiJson
 
     @Test
     fun unknownKeysAreIgnored() {

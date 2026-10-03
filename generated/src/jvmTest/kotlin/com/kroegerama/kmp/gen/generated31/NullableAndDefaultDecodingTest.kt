@@ -3,7 +3,7 @@ package com.kroegerama.kmp.gen.generated31
 import com.kroegerama.kmp.gen.generated31.models.DefaultValue
 import com.kroegerama.kmp.gen.generated31.models.NullableAttrTest
 import com.kroegerama.kmp.gen.generated31.models.Photo
-import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
+import com.kroegerama.openapi.kmp.gen.companion.ApiJson
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -11,7 +11,7 @@ import kotlin.test.assertNull
 
 class NullableAndDefaultDecodingTest {
 
-    private val json = createDefaultJson()
+    private val json = ApiJson
 
     @Test
     fun defaultValueDecodesFromEmptyObject() {

@@ -5,7 +5,7 @@ package com.kroegerama.kmp.gen.generated31
 import com.kroegerama.kmp.gen.generated31.models.DeprecatedUnion
 import com.kroegerama.kmp.gen.generated31.models.DeprecatedUnionChildA
 import com.kroegerama.kmp.gen.generated31.models.DeprecatedUnionChildB
-import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
+import com.kroegerama.openapi.kmp.gen.companion.ApiJson
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
@@ -17,7 +17,7 @@ import kotlin.test.assertEquals
  */
 class DeprecatedUnionRoundTripTest {
 
-    private val json = createDefaultJson()
+    private val json = ApiJson
 
     private inline fun <reified T> roundTrip(value: T, expectedDiscriminator: String) {
         val encoded = json.encodeToString(value)

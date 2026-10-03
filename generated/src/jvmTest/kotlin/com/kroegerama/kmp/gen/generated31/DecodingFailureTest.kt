@@ -4,7 +4,7 @@ import com.kroegerama.kmp.gen.generated31.models.ActionResponse
 import com.kroegerama.kmp.gen.generated31.models.MergedRequiredTest
 import com.kroegerama.kmp.gen.generated31.models.SealedClass1
 import com.kroegerama.kmp.gen.generated31.models.SerialTest
-import com.kroegerama.openapi.kmp.gen.companion.createDefaultJson
+import com.kroegerama.openapi.kmp.gen.companion.ApiJson
 import kotlinx.serialization.SerializationException
 import kotlin.test.Test
 import kotlin.test.assertFails
@@ -12,7 +12,7 @@ import kotlin.test.assertFailsWith
 
 class DecodingFailureTest {
 
-    private val json = createDefaultJson()
+    private val json = ApiJson
 
     @Test
     fun unknownDiscriminatorValueFails() {
