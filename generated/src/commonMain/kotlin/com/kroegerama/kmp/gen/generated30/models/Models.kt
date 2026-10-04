@@ -705,6 +705,53 @@ public data class HybridBody200Response(
   public object Serializer : AdditionalPropertiesSerializer<HybridBody200Response>(tSerializer = generatedSerializer(), bucketName = "additionalProperties")
 }
 
+@Serializable
+@Immutable
+public data class UrlencodedTypedRequest(
+  @SerialName("name")
+  public val name: String? = null,
+  @SerialName("count")
+  public val count: Long? = null,
+  @SerialName("tags")
+  public val tags: List<String>? = null,
+)
+
+@Serializable
+@Immutable
+public data class MethodBodiesRequest(
+  @SerialName("title")
+  public val title: String? = null,
+  @SerialName("priority")
+  public val priority: Long? = null,
+)
+
+@Serializable
+@Immutable
+public data class PostMethodBodiesRequest(
+  @SerialName("label")
+  public val label: String? = null,
+  @SerialName("enabled")
+  public val enabled: Boolean? = null,
+)
+
+@Serializable
+@Immutable
+public data class MixedBodyRequest(
+  @SerialName("id")
+  public val id: Long? = null,
+  @SerialName("note")
+  public val note: String? = null,
+)
+
+@Serializable
+@Immutable
+public data class MixedBodyFormRequest(
+  @SerialName("name")
+  public val name: String? = null,
+  @SerialName("count")
+  public val count: Long? = null,
+)
+
 public typealias DateTime = SerializableISO8601Instant
 
 /**

@@ -20,10 +20,14 @@ import com.kroegerama.kmp.gen.generated30.models.DefaultValue
 import com.kroegerama.kmp.gen.generated30.models.HybridBody200Response
 import com.kroegerama.kmp.gen.generated30.models.HybridBodyRequest
 import com.kroegerama.kmp.gen.generated30.models.IntegerTest
+import com.kroegerama.kmp.gen.generated30.models.MethodBodiesRequest
+import com.kroegerama.kmp.gen.generated30.models.MixedBodyRequest
 import com.kroegerama.kmp.gen.generated30.models.NumberTest
 import com.kroegerama.kmp.gen.generated30.models.Photo
+import com.kroegerama.kmp.gen.generated30.models.PostMethodBodiesRequest
 import com.kroegerama.kmp.gen.generated30.models.SerialTest
 import com.kroegerama.kmp.gen.generated30.models.TypedHybrid
+import com.kroegerama.kmp.gen.generated30.models.UrlencodedTypedRequest
 import com.kroegerama.openapi.kmp.gen.`companion`.AuthPlugin.Plugin.authKeys
 import com.kroegerama.openapi.kmp.gen.`companion`.Base64Serializer
 import com.kroegerama.openapi.kmp.gen.`companion`.CallException
@@ -37,6 +41,7 @@ import com.kroegerama.openapi.kmp.gen.`companion`.SerializableEpochSeconds
 import com.kroegerama.openapi.kmp.gen.`companion`.SerializableISO8601Instant
 import com.kroegerama.openapi.kmp.gen.`companion`.appendSerializedHeaderParameter
 import com.kroegerama.openapi.kmp.gen.`companion`.appendSerializedQueryParameter
+import com.kroegerama.openapi.kmp.gen.`companion`.asFormDataContent
 import com.kroegerama.openapi.kmp.gen.`companion`.createSerializedPathSegment
 import com.kroegerama.openapi.kmp.gen.`companion`.eitherRequest
 import com.kroegerama.openapi.kmp.gen.`companion`.setSerializedBody
@@ -310,6 +315,73 @@ public object DefaultApi {
       "urlencoded",
     )
     if (body != null) {
+      setBody(body)
+    }
+    decorator()
+  }
+
+  /**
+   * `POST /urlencodedTyped`
+   *
+   * @return OK
+   */
+  public suspend fun urlEncodedTyped(body: UrlencodedTypedRequest? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("POST")
+    url.appendPathSegments(
+      "urlencodedTyped",
+    )
+    if (body != null) {
+      setBody(body.asFormDataContent(json = Api.json))
+    }
+    decorator()
+  }
+
+  /**
+   * `PUT /methodBodies`
+   *
+   * @return OK
+   */
+  public suspend fun methodBodiesPut(body: MethodBodiesRequest? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("PUT")
+    url.appendPathSegments(
+      "methodBodies",
+    )
+    if (body != null) {
+      contentType(ContentType.Application.Json)
+      setBody(body)
+    }
+    decorator()
+  }
+
+  /**
+   * `POST /methodBodies`
+   *
+   * @return OK
+   */
+  public suspend fun methodBodiesPost(body: PostMethodBodiesRequest? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("POST")
+    url.appendPathSegments(
+      "methodBodies",
+    )
+    if (body != null) {
+      contentType(ContentType.Application.Json)
+      setBody(body)
+    }
+    decorator()
+  }
+
+  /**
+   * `POST /mixedBody`
+   *
+   * @return OK
+   */
+  public suspend fun mixedBody(body: MixedBodyRequest? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    method = HttpMethod.parse("POST")
+    url.appendPathSegments(
+      "mixedBody",
+    )
+    if (body != null) {
+      contentType(ContentType.Application.Json)
       setBody(body)
     }
     decorator()

@@ -265,6 +265,81 @@ paths:
       responses:
         200:
           description: OK
+  /urlencodedTyped:
+    post:
+      operationId: urlEncodedTyped
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                count:
+                  type: integer
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        200:
+          description: OK
+  /methodBodies:
+    put:
+      operationId: methodBodiesPut
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                priority:
+                  type: integer
+      responses:
+        200:
+          description: OK
+    post:
+      operationId: methodBodiesPost
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                enabled:
+                  type: boolean
+      responses:
+        200:
+          description: OK
+  /mixedBody:
+    post:
+      operationId: mixedBody
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                note:
+                  type: string
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                count:
+                  type: integer
+      responses:
+        200:
+          description: OK
   /serializedParams/{pathInstant}:
     get:
       operationId: serializedParams
