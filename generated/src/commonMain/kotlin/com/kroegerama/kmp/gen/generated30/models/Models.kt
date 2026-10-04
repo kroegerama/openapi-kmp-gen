@@ -716,6 +716,66 @@ public data class UrlencodedTypedRequest(
   public val tags: List<String>? = null,
 )
 
+/**
+ * @param file file with an encoding content type
+ * @param url shadows the request builder member
+ * @param description clashes with the query parameter -> body prefix
+ */
+@Serializable
+@Immutable
+public data class MultipartTypedRequest(
+  /**
+   * file with an encoding content type
+   */
+  @SerialName("file")
+  public val `file`: String,
+  @SerialName("attachments")
+  public val attachments: List<String>? = null,
+  @SerialName("avatar")
+  public val avatar: BinaryFile? = null,
+  @SerialName("metadata")
+  public val metadata: Metadata? = null,
+  @SerialName("options")
+  public val options: JsonElement? = null,
+  /**
+   * shadows the request builder member
+   */
+  @SerialName("url")
+  public val url: String,
+  /**
+   * clashes with the query parameter -> body prefix
+   */
+  @SerialName("description")
+  public val description: String? = null,
+) {
+  @Serializable
+  @Immutable
+  public data class Metadata(
+    @SerialName("title")
+    public val title: String? = null,
+    @SerialName("pages")
+    public val pages: Long? = null,
+  )
+}
+
+@Serializable
+@Immutable
+public data class MultipartOptionalRequest(
+  @SerialName("file")
+  public val `file`: String,
+  @SerialName("note")
+  public val note: String? = null,
+)
+
+@Serializable
+@Immutable
+public data class MultipartUntypedRequest(
+  @SerialName("file")
+  public val `file`: JsonElement? = null,
+  @SerialName("note")
+  public val note: String? = null,
+)
+
 @Serializable
 @Immutable
 public data class MethodBodiesRequest(
@@ -753,6 +813,8 @@ public data class MixedBodyFormRequest(
 )
 
 public typealias DateTime = SerializableISO8601Instant
+
+public typealias BinaryFile = String
 
 /**
  * Nullable Photo via allOf

@@ -260,6 +260,93 @@ paths:
       responses:
         200:
           description: OK
+  /multipartTyped:
+    post:
+      operationId: multipartTyped
+      parameters:
+        - in: query
+          name: description
+          schema:
+            type: string
+      requestBody:
+        required: true
+        description: typed multipart body
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [ file, url ]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: file with an encoding content type
+                attachments:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                avatar:
+                  $ref: '#/components/schemas/BinaryFile'
+                metadata:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    pages:
+                      type: integer
+                options:
+                  type: object
+                url:
+                  type: string
+                  description: shadows the request builder member
+                description:
+                  type: string
+                  description: clashes with the query parameter -> body prefix
+            encoding:
+              file:
+                contentType: application/pdf
+              attachments:
+                contentType: 'image/*, image/png'
+              metadata:
+                contentType: application/json
+      responses:
+        200:
+          description: OK
+  /multipartOptional:
+    post:
+      operationId: multipartOptional
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [ file ]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                note:
+                  type: string
+      responses:
+        204:
+          description: optional body -> nullable parts, no body when all parts are null
+  /multipartUntyped:
+    post:
+      operationId: multipartUntyped
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { }
+                note:
+                  type: string
+      responses:
+        204:
+          description: untyped part is ambiguous in 3.0 -> MultiPartFormDataContent parameter
   /methodBodies:
     put:
       operationId: methodBodiesPut
@@ -471,6 +558,9 @@ components:
     DateTime:
       type: string
       format: date-time
+    BinaryFile:
+      type: string
+      format: binary
     NullableAttrTest:
       required: [ attr2, attr4, attr5 ]
       properties:

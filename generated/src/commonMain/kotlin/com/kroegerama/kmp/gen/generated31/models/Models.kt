@@ -42,6 +42,13 @@ import kotlinx.serialization.json.JsonClassDiscriminator
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
+@Serializable
+@Immutable
+public data class SharedBodyModel(
+  @SerialName("name")
+  public val name: String? = null,
+)
+
 /**
  * @param attr1 required -> not null
  * @param attr2 required allOf -> not null
@@ -913,6 +920,103 @@ public data class UrlencodedTypedRequest(
   public val tags: List<String>? = null,
 )
 
+/**
+ * @param file file with an encoding content type
+ * @param url shadows the request builder member
+ * @param description clashes with the query parameter -> body prefix
+ */
+@Serializable
+@Immutable
+public data class MultipartTypedRequest(
+  /**
+   * file with an encoding content type
+   */
+  @SerialName("file")
+  public val `file`: String,
+  @SerialName("attachments")
+  public val attachments: List<String>? = null,
+  @SerialName("avatar")
+  public val avatar: BinaryFile? = null,
+  @SerialName("metadata")
+  public val metadata: Metadata? = null,
+  @SerialName("options")
+  public val options: JsonElement? = null,
+  /**
+   * shadows the request builder member
+   */
+  @SerialName("url")
+  public val url: String,
+  /**
+   * clashes with the query parameter -> body prefix
+   */
+  @SerialName("description")
+  public val description: String? = null,
+) {
+  @Serializable
+  @Immutable
+  public data class Metadata(
+    @SerialName("title")
+    public val title: String? = null,
+    @SerialName("pages")
+    public val pages: Long? = null,
+  )
+}
+
+@Serializable
+@Immutable
+public data class MultipartOptionalRequest(
+  @SerialName("file")
+  public val `file`: String,
+  @SerialName("note")
+  public val note: String? = null,
+)
+
+@Serializable
+@Immutable
+public data class MultipartMediaTypesRequest(
+  @SerialName("image")
+  public val image: String,
+  @SerialName("document")
+  public val document: JsonElement? = null,
+  @SerialName("files")
+  public val files: List<JsonElement>? = null,
+  @SerialName("wildcard")
+  public val wildcard: JsonElement? = null,
+  @SerialName("notes")
+  public val notes: String? = null,
+  @SerialName("encoded")
+  public val encoded: String? = null,
+  @SerialName("encodedTyped")
+  public val encodedTyped: String? = null,
+  @SerialName("token")
+  public val token: Uuid? = null,
+)
+
+@Serializable
+@Immutable
+public data class MultipartWildcardRequest(
+  @SerialName("file")
+  public val `file`: String? = null,
+  @SerialName("photo")
+  public val photo: String? = null,
+)
+
+@Serializable
+@Immutable
+public data class MultipartXmlRequest(
+  @SerialName("file")
+  public val `file`: String? = null,
+  @SerialName("metadata")
+  public val metadata: Metadata? = null,
+) {
+  @Serializable
+  @Immutable
+  public data class Metadata(
+    @SerialName("title")
+    public val title: String? = null,
+  )
+}
+
 @Serializable
 @Immutable
 public data class MethodBodiesRequest(
@@ -950,6 +1054,8 @@ public data class MixedBodyFormRequest(
 )
 
 public typealias DateTime = SerializableISO8601Instant
+
+public typealias BinaryFile = String
 
 /**
  * ref to intrinsically nullable named schema -> nullable typealias

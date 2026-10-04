@@ -23,6 +23,14 @@ paths:
       responses:
         200:
           $ref: '#/components/responses/TestResponse'
+  /sharedRequestBody:
+    post:
+      operationId: sharedRequestBody
+      requestBody:
+        $ref: '#/components/requestBodies/SharedModelRequestBody'
+      responses:
+        204:
+          description: shared request body whose schema is referenced nowhere else
   /{status}:
     servers:
       - url: https://mock.httpstatus.io
@@ -285,6 +293,169 @@ paths:
       responses:
         200:
           description: OK
+  /multipartTyped:
+    post:
+      operationId: multipartTyped
+      parameters:
+        - in: query
+          name: description
+          schema:
+            type: string
+      requestBody:
+        required: true
+        description: typed multipart body
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [ file, url ]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: file with an encoding content type
+                attachments:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                avatar:
+                  $ref: '#/components/schemas/BinaryFile'
+                metadata:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    pages:
+                      type: integer
+                options:
+                  type: object
+                url:
+                  type: string
+                  description: shadows the request builder member
+                description:
+                  type: string
+                  description: clashes with the query parameter -> body prefix
+            encoding:
+              file:
+                contentType: application/pdf
+              attachments:
+                contentType: 'image/*, image/png'
+              metadata:
+                contentType: application/json
+      responses:
+        200:
+          description: OK
+  /multipartOptional:
+    post:
+      operationId: multipartOptional
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [ file ]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                note:
+                  type: string
+      responses:
+        204:
+          description: optional body -> nullable parts, no body when all parts are null
+  /multipartMediaTypes:
+    post:
+      operationId: multipartMediaTypes
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [ image ]
+              properties:
+                image:
+                  type: string
+                  contentMediaType: image/png
+                document:
+                  contentMediaType: application/pdf
+                files:
+                  type: array
+                  items: { }
+                wildcard:
+                  contentMediaType: 'image/*'
+                notes:
+                  type: string
+                  format: binary
+                encoded:
+                  contentMediaType: image/png
+                  contentEncoding: base64
+                encodedTyped:
+                  type: string
+                  contentMediaType: image/png
+                  contentEncoding: base64
+                token:
+                  type: string
+                  format: uuid
+                  contentMediaType: 'text/plain; charset = utf-8'
+            encoding:
+              wildcard:
+                contentType: 'image/*'
+              notes:
+                contentType: 'text/plain; charset=utf-8'
+              encodedTyped:
+                contentType: 'image/*, text/*'
+      responses:
+        204:
+          description: contentMediaType and untyped parts -> file parts, format and contentEncoding -> value parts
+  /multipartWildcard:
+    post:
+      operationId: multipartWildcard
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                photo:
+                  type: string
+            encoding:
+              file:
+                contentType: not a content type
+              photo:
+                contentType: 'image/*'
+      responses:
+        204:
+          description: wildcard content type that does not cover the default of a value part -> MultiPartFormDataContent parameter
+  /multipartXml:
+    post:
+      operationId: multipartXml
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                metadata:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+            encoding:
+              metadata:
+                contentType: application/xml
+      responses:
+        204:
+          description: non-default content type on a value part -> MultiPartFormDataContent parameter
   /methodBodies:
     put:
       operationId: methodBodiesPut
@@ -485,6 +656,12 @@ components:
             type: array
             items:
               type: string
+    SharedModelRequestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SharedBodyModel'
   responses:
     TestResponse:
       description: OK
@@ -496,6 +673,14 @@ components:
     DateTime:
       type: string
       format: date-time
+    BinaryFile:
+      type: string
+      format: binary
+    SharedBodyModel:
+      type: object
+      properties:
+        name:
+          type: string
     NullableAttrTest:
       required: [ attr1, attr2, attr4, attr5, attr6, attr7, attr8, attr9, attr10, attr11, attr12 ]
       properties:

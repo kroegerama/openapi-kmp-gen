@@ -22,6 +22,7 @@ import com.kroegerama.kmp.gen.generated30.models.HybridBodyRequest
 import com.kroegerama.kmp.gen.generated30.models.IntegerTest
 import com.kroegerama.kmp.gen.generated30.models.MethodBodiesRequest
 import com.kroegerama.kmp.gen.generated30.models.MixedBodyRequest
+import com.kroegerama.kmp.gen.generated30.models.MultipartTypedRequest
 import com.kroegerama.kmp.gen.generated30.models.NumberTest
 import com.kroegerama.kmp.gen.generated30.models.Photo
 import com.kroegerama.kmp.gen.generated30.models.PostMethodBodiesRequest
@@ -33,13 +34,16 @@ import com.kroegerama.openapi.kmp.gen.`companion`.Base64Serializer
 import com.kroegerama.openapi.kmp.gen.`companion`.CallException
 import com.kroegerama.openapi.kmp.gen.`companion`.EpochMillisecondsSerializer
 import com.kroegerama.openapi.kmp.gen.`companion`.EpochSecondsSerializer
+import com.kroegerama.openapi.kmp.gen.`companion`.FilePart
 import com.kroegerama.openapi.kmp.gen.`companion`.HttpCallResponse
 import com.kroegerama.openapi.kmp.gen.`companion`.ISO8601InstantSerializer
 import com.kroegerama.openapi.kmp.gen.`companion`.SerializableBase64
 import com.kroegerama.openapi.kmp.gen.`companion`.SerializableEpochMilliseconds
 import com.kroegerama.openapi.kmp.gen.`companion`.SerializableEpochSeconds
 import com.kroegerama.openapi.kmp.gen.`companion`.SerializableISO8601Instant
+import com.kroegerama.openapi.kmp.gen.`companion`.appendFilePart
 import com.kroegerama.openapi.kmp.gen.`companion`.appendSerializedHeaderParameter
+import com.kroegerama.openapi.kmp.gen.`companion`.appendSerializedPart
 import com.kroegerama.openapi.kmp.gen.`companion`.appendSerializedQueryParameter
 import com.kroegerama.openapi.kmp.gen.`companion`.asFormDataContent
 import com.kroegerama.openapi.kmp.gen.`companion`.createSerializedPathSegment
@@ -48,6 +52,7 @@ import com.kroegerama.openapi.kmp.gen.`companion`.setSerializedBody
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
@@ -65,6 +70,7 @@ import kotlin.collections.Map
 import kotlin.collections.emptyList
 import kotlin.collections.emptyMap
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
 public object DefaultApi {
@@ -78,8 +84,8 @@ public object DefaultApi {
     body: List<String> = emptyList(),
     decorator: HttpRequestBuilder.() -> Unit = {},
   ): Either<CallException, HttpCallResponse<Photo>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("POST")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("POST")
+    this.url.appendPathSegments(
       "refTest",
     )
     appendSerializedQueryParameter(name = "testParam", value = testParam, serializer = ISO8601InstantSerializer, explode = true, json = Api.json)
@@ -98,9 +104,9 @@ public object DefaultApi {
     count: Int? = null,
     decorator: HttpRequestBuilder.() -> Unit = {},
   ): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("GET")
-    url.takeFrom("https://mock.httpstatus.io/")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("GET")
+    this.url.takeFrom("https://mock.httpstatus.io/")
+    this.url.appendPathSegments(
       createSerializedPathSegment(value = status, explode = false, json = Api.json),
     )
     appendSerializedQueryParameter(name = "count", value = count, explode = true, json = Api.json)
@@ -113,8 +119,8 @@ public object DefaultApi {
    * @return OK
    */
   public suspend fun getPhoto(id: Int, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Photo>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("GET")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("GET")
+    this.url.appendPathSegments(
       "photos",
       createSerializedPathSegment(value = id, explode = false, json = Api.json),
     )
@@ -127,8 +133,8 @@ public object DefaultApi {
    * @return OK
    */
   public suspend fun getSerialTest(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<SerialTest>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("GET")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("GET")
+    this.url.appendPathSegments(
       "serialTest",
     )
     decorator()
@@ -140,8 +146,8 @@ public object DefaultApi {
    * @return OK
    */
   public suspend fun getIntegerTest(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<IntegerTest>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("GET")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("GET")
+    this.url.appendPathSegments(
       "integerTest",
     )
     decorator()
@@ -153,8 +159,8 @@ public object DefaultApi {
    * @return OK
    */
   public suspend fun getNumberTest(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<NumberTest>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("GET")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("GET")
+    this.url.appendPathSegments(
       "numberTest",
     )
     decorator()
@@ -166,8 +172,8 @@ public object DefaultApi {
    * @return OK
    */
   public suspend fun defaultValue(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<DefaultValue>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("GET")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("GET")
+    this.url.appendPathSegments(
       "defaultValue",
     )
     decorator()
@@ -179,8 +185,8 @@ public object DefaultApi {
    * @return media type without schema -> raw response, not null
    */
   public suspend fun rawResponse(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<HttpResponse>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("GET")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("GET")
+    this.url.appendPathSegments(
       "rawResponse",
     )
     decorator()
@@ -192,8 +198,8 @@ public object DefaultApi {
    * @return required body with nullable=true -> nullable body parameter
    */
   public suspend fun nullableBody(body: Photo? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("POST")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("POST")
+    this.url.appendPathSegments(
       "nullableBody",
     )
     contentType(ContentType.Application.Json)
@@ -207,8 +213,8 @@ public object DefaultApi {
    * @return OK
    */
   public suspend fun listBody(body: List<Long> = emptyList(), decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("POST")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("POST")
+    this.url.appendPathSegments(
       "listBody",
     )
     contentType(ContentType.Application.Json)
@@ -222,8 +228,8 @@ public object DefaultApi {
    * @return OK
    */
   public suspend fun mapBody(body: Map<String, Long> = emptyMap(), decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("POST")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("POST")
+    this.url.appendPathSegments(
       "mapBody",
     )
     contentType(ContentType.Application.Json)
@@ -237,8 +243,8 @@ public object DefaultApi {
    * @return inline hybrid body and response -> hoisted classes with a bucket property
    */
   public suspend fun hybridBody(body: HybridBodyRequest, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<HybridBody200Response>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("POST")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("POST")
+    this.url.appendPathSegments(
       "hybridBody",
     )
     contentType(ContentType.Application.Json)
@@ -252,8 +258,8 @@ public object DefaultApi {
    * @return list of hybrids -> reified list serializer goes through the class serializer
    */
   public suspend fun hybridList(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<List<TypedHybrid>>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("GET")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("GET")
+    this.url.appendPathSegments(
       "hybridList",
     )
     decorator()
@@ -265,8 +271,8 @@ public object DefaultApi {
    * @return free-form body and response -> JsonObject
    */
   public suspend fun freeFormBody(body: JsonObject = JsonObject(emptyMap()), decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<JsonObject>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("POST")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("POST")
+    this.url.appendPathSegments(
       "freeFormBody",
     )
     contentType(ContentType.Application.Json)
@@ -280,14 +286,14 @@ public object DefaultApi {
    * @return OK
    */
   public suspend fun multipart(body: MultiPartFormDataContent? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("POST")
+    this.method = HttpMethod.parse("POST")
     authKeys(
       Auth.BasicAuth.ID,
       Auth.TokenAuth.ID,
       Auth.APIKeyAuth.ID,
     )
-    url.takeFrom("https://example.com/")
-    url.appendPathSegments(
+    this.url.takeFrom("https://example.com/")
+    this.url.appendPathSegments(
       "multipart",
     )
     if (body != null) {
@@ -302,7 +308,7 @@ public object DefaultApi {
    * @return OK
    */
   public suspend fun urlEncoded(body: FormDataContent? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("POST")
+    this.method = HttpMethod.parse("POST")
     authKeys(
       Auth.BearerAuth.ID,
       Auth.TokenAuth.ID,
@@ -310,8 +316,8 @@ public object DefaultApi {
       Auth.OAuth.ID,
       Auth.OIDCAuth.ID,
     )
-    url.takeFrom("https://example.com/")
-    url.appendPathSegments(
+    this.url.takeFrom("https://example.com/")
+    this.url.appendPathSegments(
       "urlencoded",
     )
     if (body != null) {
@@ -326,8 +332,8 @@ public object DefaultApi {
    * @return OK
    */
   public suspend fun urlEncodedTyped(body: UrlencodedTypedRequest? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("POST")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("POST")
+    this.url.appendPathSegments(
       "urlencodedTyped",
     )
     if (body != null) {
@@ -337,13 +343,90 @@ public object DefaultApi {
   }
 
   /**
+   * `POST /multipartTyped`
+   *
+   * typed multipart body
+   * @param file file with an encoding content type
+   * @param url shadows the request builder member
+   * @param bodyDescription clashes with the query parameter -> body prefix
+   *
+   * @return OK
+   */
+  public suspend fun multipartTyped(
+    description: String? = null,
+    `file`: FilePart,
+    attachments: List<FilePart>? = null,
+    avatar: FilePart? = null,
+    metadata: MultipartTypedRequest.Metadata? = null,
+    options: JsonElement? = null,
+    url: String,
+    bodyDescription: String? = null,
+    decorator: HttpRequestBuilder.() -> Unit = {},
+  ): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    this.method = HttpMethod.parse("POST")
+    this.url.appendPathSegments(
+      "multipartTyped",
+    )
+    appendSerializedQueryParameter(name = "description", value = description, explode = true, json = Api.json)
+    setBody(MultiPartFormDataContent(formData {
+      appendFilePart(name = "file", value = `file`, defaultContentType = ContentType.parse("application/pdf"))
+      attachments?.forEach {
+        appendFilePart(name = "attachments", value = it, defaultContentType = ContentType.parse("image/png"))
+      }
+      appendFilePart(name = "avatar", value = avatar, defaultContentType = ContentType.parse("application/octet-stream"))
+      appendSerializedPart(name = "metadata", value = metadata, json = Api.json)
+      appendSerializedPart(name = "options", value = options, json = Api.json)
+      appendSerializedPart(name = "url", value = url, json = Api.json)
+      appendSerializedPart(name = "description", value = bodyDescription, json = Api.json)
+    }))
+    decorator()
+  }
+
+  /**
+   * `POST /multipartOptional`
+   *
+   * @return optional body -> nullable parts, no body when all parts are null
+   */
+  public suspend fun multipartOptional(
+    `file`: FilePart? = null,
+    note: String? = null,
+    decorator: HttpRequestBuilder.() -> Unit = {},
+  ): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    this.method = HttpMethod.parse("POST")
+    this.url.appendPathSegments(
+      "multipartOptional",
+    )
+    if (`file` != null || note != null) {
+      setBody(MultiPartFormDataContent(formData {
+        appendFilePart(name = "file", value = `file`, defaultContentType = ContentType.parse("application/octet-stream"))
+        appendSerializedPart(name = "note", value = note, json = Api.json)
+      }))
+    }
+    decorator()
+  }
+
+  /**
+   * `POST /multipartUntyped`
+   *
+   * @return untyped part is ambiguous in 3.0 -> MultiPartFormDataContent parameter
+   */
+  public suspend fun multipartUntyped(body: MultiPartFormDataContent, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
+    this.method = HttpMethod.parse("POST")
+    this.url.appendPathSegments(
+      "multipartUntyped",
+    )
+    setBody(body)
+    decorator()
+  }
+
+  /**
    * `PUT /methodBodies`
    *
    * @return OK
    */
   public suspend fun methodBodiesPut(body: MethodBodiesRequest? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("PUT")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("PUT")
+    this.url.appendPathSegments(
       "methodBodies",
     )
     if (body != null) {
@@ -359,8 +442,8 @@ public object DefaultApi {
    * @return OK
    */
   public suspend fun methodBodiesPost(body: PostMethodBodiesRequest? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("POST")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("POST")
+    this.url.appendPathSegments(
       "methodBodies",
     )
     if (body != null) {
@@ -376,8 +459,8 @@ public object DefaultApi {
    * @return OK
    */
   public suspend fun mixedBody(body: MixedBodyRequest? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("POST")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("POST")
+    this.url.appendPathSegments(
       "mixedBody",
     )
     if (body != null) {
@@ -401,8 +484,8 @@ public object DefaultApi {
     queryInstantList: List<SerializableISO8601Instant>? = null,
     decorator: HttpRequestBuilder.() -> Unit = {},
   ): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("GET")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("GET")
+    this.url.appendPathSegments(
       "serializedParams",
       createSerializedPathSegment(value = pathInstant, serializer = ISO8601InstantSerializer, explode = false, json = Api.json),
     )
@@ -420,8 +503,8 @@ public object DefaultApi {
    * @return OK
    */
   public suspend fun instantBody(body: SerializableISO8601Instant, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("POST")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("POST")
+    this.url.appendPathSegments(
       "instantBody",
     )
     contentType(ContentType.Application.Json)
@@ -435,8 +518,8 @@ public object DefaultApi {
    * @return optional body -> nullable parameter, null sends no body
    */
   public suspend fun optionalBody(body: Photo? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("POST")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("POST")
+    this.url.appendPathSegments(
       "optionalBody",
     )
     if (body != null) {
@@ -452,8 +535,8 @@ public object DefaultApi {
    * @return optional body with explicit serializer -> nullable parameter, null sends no body
    */
   public suspend fun optionalInstantBody(body: SerializableISO8601Instant? = null, decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<Unit>> = Api.client.eitherRequest {
-    method = HttpMethod.parse("POST")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("POST")
+    this.url.appendPathSegments(
       "optionalInstantBody",
     )
     if (body != null) {
@@ -469,8 +552,8 @@ public object DefaultApi {
    * @return OK
    */
   public suspend fun epochSecondsResponse(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<SerializableEpochSeconds>> = Api.client.eitherRequest(deserializer = EpochSecondsSerializer, json = Api.json) {
-    method = HttpMethod.parse("GET")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("GET")
+    this.url.appendPathSegments(
       "epochSecondsResponse",
     )
     decorator()
@@ -482,8 +565,8 @@ public object DefaultApi {
    * @return OK
    */
   public suspend fun instantListResponse(decorator: HttpRequestBuilder.() -> Unit = {}): Either<CallException, HttpCallResponse<List<SerializableISO8601Instant>>> = Api.client.eitherRequest(deserializer = ListSerializer(ISO8601InstantSerializer), json = Api.json) {
-    method = HttpMethod.parse("GET")
-    url.appendPathSegments(
+    this.method = HttpMethod.parse("GET")
+    this.url.appendPathSegments(
       "instantListResponse",
     )
     decorator()
