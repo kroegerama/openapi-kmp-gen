@@ -238,7 +238,7 @@ class PoetGenerator(
                     when (operation.type) {
                         SpecOperation.Type.Default -> createBodyParameter(body)
                         SpecOperation.Type.Multipart -> createMultipartBodyParameter(body)
-                        SpecOperation.Type.UrlEncoded -> createUrlEncodedBodyParameter(body)
+                        SpecOperation.Type.UrlEncoded -> createUrlEncodedBodyParameter(operation, body)
                         SpecOperation.Type.Unknown -> createAnyBodyParameter(body)
                     }
                 )
@@ -356,12 +356,13 @@ class PoetGenerator(
             }
 
             operation.body?.let { body ->
-                // an omitted optional body sends neither content type nor payload
-                if (!body.required) {
+                // an omitted optional body sends neither content type nor payload; a typed form body has no null representation
+                val guardNull = !body.required || (isTypedUrlEncodedBody(operation, body) && body.acceptsNull)
+                if (guardNull) {
                     beginControlFlow("if (body != null)")
                 }
                 addBodyStatements(operation, body)
-                if (!body.required) {
+                if (guardNull) {
                     endControlFlow()
                 }
             }
@@ -383,7 +384,9 @@ class PoetGenerator(
         } else {
             null
         }
-        if (serializer == null) {
+        if (isTypedUrlEncodedBody(operation, body)) {
+            addStatement("%M(body.%M(json = %T.json))", PoetMembers.RequestSetBody, PoetMembers.AsFormDataContent, types.api)
+        } else if (serializer == null) {
             addStatement("%M(body)", PoetMembers.RequestSetBody)
         } else {
             // a required nullable body sends a JSON null
@@ -423,10 +426,18 @@ class PoetGenerator(
         }
     }
 
-    private fun createUrlEncodedBodyParameter(info: SpecOperation.SchemaInfo): ParameterSpec {
-        return poetParameter("body", PoetTypes.FormDataContent.nullable(info.acceptsNull)) {
+    private fun createUrlEncodedBodyParameter(operation: SpecOperation, info: SpecOperation.SchemaInfo): ParameterSpec {
+        val type = if (isTypedUrlEncodedBody(operation, info)) convertSimpleType(info.type) else PoetTypes.FormDataContent
+        return poetParameter("body", type.nullable(info.acceptsNull)) {
             handleSchemaInfo(info)
         }
+    }
+
+    private fun isTypedUrlEncodedBody(operation: SpecOperation, info: SpecOperation.SchemaInfo): Boolean {
+        if (operation.type != SpecOperation.Type.UrlEncoded) return false
+        val ref = info.type as? SpecSchema.Ref ?: return false
+        val schema = namedSchemas[ref.typeNames] as? SpecSchema.Object ?: return false
+        return schema.additionalProperties == null
     }
 
     private fun createAnyBodyParameter(info: SpecOperation.SchemaInfo): ParameterSpec {

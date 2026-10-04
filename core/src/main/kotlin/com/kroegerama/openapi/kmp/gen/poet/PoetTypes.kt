@@ -120,6 +120,7 @@ object PoetMembers {
     val AppendSerializedHeaderParameter = MemberName(COMPANION_PACKAGE, "appendSerializedHeaderParameter")
     val AppendSerializedCookieParameter = MemberName(COMPANION_PACKAGE, "appendSerializedCookieParameter")
     val CreateSerializedPathSegment = MemberName(COMPANION_PACKAGE, "createSerializedPathSegment")
+    val AsFormDataContent = MemberName(COMPANION_PACKAGE, "asFormDataContent")
     val AuthKeys = ClassName(COMPANION_PACKAGE, "AuthPlugin", "Plugin").member("authKeys")
     val AppendPathSegments = MemberName(KTOR_HTTP_PACKAGE, "appendPathSegments")
     val TakeFrom = MemberName(KTOR_HTTP_PACKAGE, "takeFrom")

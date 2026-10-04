@@ -12,6 +12,8 @@ import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters.Parameter
 import java.util.IdentityHashMap
 
+private val mimeTokenSeparatorRegex = "[^a-z0-9]+".toRegex()
+
 class SpecParser(
     private val specFile: String,
     private val options: OptionSet,
@@ -59,23 +61,35 @@ class SpecParser(
             operation.parameters?.forEach { parameter ->
                 flattenParameter(name, parameter)
             }
+            val operationNames = mutableSetOf<String>()
             operation.requestBody?.content?.forEach { (mimeType, mediaType) ->
-                flattenMediaType("$baseName.request", mediaType)
+                flattenMediaType(baseName, "request", method, mimeType, mediaType, operationNames)
             }
             operation.responses?.forEach { (code, apiResponse) ->
                 apiResponse.content?.forEach { (mimeType, mediaType) ->
-                    flattenMediaType("$baseName.$code.response", mediaType)
+                    flattenMediaType(baseName, "$code.response", method, mimeType, mediaType, operationNames)
                 }
             }
         }
     }
 
-    private fun OpenAPI.flattenMediaType(baseName: String, mediaType: MediaType) {
+    private fun OpenAPI.flattenMediaType(
+        baseName: String,
+        suffix: String,
+        method: PathItem.HttpMethod,
+        mimeType: String,
+        mediaType: MediaType,
+        operationNames: MutableSet<String>
+    ) {
         mediaType.schema?.let { schema ->
             val type = schema.effectiveSchema().getSpecType()
             if (type.needsName) {
-                val name = createSchemaName(baseName)
-                schema(name, schema)
+                val plainName = "$baseName.$suffix"
+                val mimeToken = mimeToken(mimeType)
+                val methodName = method.name.lowercase() + "." + baseName
+                val firstFallback = if (createSchemaName(plainName) in operationNames) "$baseName.$mimeToken.$suffix" else "$methodName.$suffix"
+                val name = hoistSchema(schema, listOf(plainName, firstFallback, "$methodName.$mimeToken.$suffix"))
+                operationNames += name
                 mediaType.schema = Schema<Any>().`$ref`("#/components/schemas/$name")
             }
         }
@@ -85,10 +99,38 @@ class SpecParser(
         parameter.schema?.let { schema ->
             val type = schema.effectiveSchema().getSpecType()
             if (type.needsName) {
-                val name = createSchemaName(baseName + "." + parameter.name)
-                schema(name, schema)
+                val plainName = baseName + "." + parameter.name
+                val name = hoistSchema(schema, listOf(plainName, plainName + "." + parameter.`in`))
                 parameter.schema = Schema<Any>().`$ref`("#/components/schemas/$name")
             }
+        }
+    }
+
+    /**
+     * Registers [schema] under the first of [baseNames] that is free or already holds an equal schema, falling back to a numeric suffix.
+     */
+    private fun OpenAPI.hoistSchema(schema: Schema<*>, baseNames: List<String>): String {
+        val names = baseNames.map { createSchemaName(it) }
+        val candidates = names.asSequence() + generateSequence(2) { it + 1 }.map { names.first() + it }
+        for (candidate in candidates) {
+            val existing = components?.schemas?.get(candidate)
+            if (existing == null) {
+                schema(candidate, schema)
+                return candidate
+            }
+            if (existing == schema) {
+                return candidate
+            }
+        }
+        error("No schema name available for ${names.first()}")
+    }
+
+    private fun mimeToken(mimeType: String): String {
+        return when (val subtype = mimeType.substringBefore(';').substringAfter('/').trim().lowercase()) {
+            "json" -> "json"
+            "x-www-form-urlencoded" -> "form"
+            "form-data" -> "multipart"
+            else -> subtype.split(mimeTokenSeparatorRegex).joinToString(".")
         }
     }
 

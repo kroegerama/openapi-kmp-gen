@@ -182,7 +182,7 @@ data class Pet(
 
 Extension functions to convert any `@Serializable` object to:
 
-- `asFormDataContent(json)` - URL-encoded form data
+- `asFormDataContent(explode, json)` - URL-encoded form data
 - `asMultiPartFormDataContent(json)` - multipart form data
 
 Both take the `Json` instance to encode with as a required argument:
@@ -190,6 +190,24 @@ Both take the `Json` instance to encode with as a required argument:
 ```kotlin
 val body = form.asFormDataContent(json = Api.json)
 ```
+
+Generated code calls `asFormDataContent` for URL-encoded request bodies whose schema is an object with declared properties and without
+`additionalProperties`; other form bodies keep a `FormDataContent` parameter.
+
+Each top-level property becomes one entry and `null` properties are skipped. Only the first level is expanded:
+
+- Primitives are sent as their text form, strings without quotes.
+- Arrays follow OpenAPI form style. With `explode = true` (the default) each item becomes its own pair (`tags=a&tags=b`), with
+  `explode = false` the items are joined with commas (`tags=a,b`). `null` items are dropped, and an array without remaining items sends
+  nothing. Items that are arrays or objects are sent as JSON text; without explode they are joined with commas as well
+  (`m=["a"],["b"]`), which a server cannot split reliably.
+- Nested objects are sent as JSON text.
+- `encoding` entries of URL-encoded request bodies in the spec are ignored.
+
+`asMultiPartFormDataContent` sends every property as a text part. An array is sent as a single JSON-text part there, unlike
+`asFormDataContent`, which sends one pair per item. Binary parts are not supported; build file uploads with Ktor's `formData { }` instead.
+
+A custom `Json` needs `encodeDefaults = true`, otherwise properties that hold their default value are left out of the form.
 
 ### `JWT`
 
