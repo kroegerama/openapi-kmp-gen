@@ -32,7 +32,8 @@ class PoetTypes(
         private const val KTOR_CLIENT_REQUEST_FORMS = "io.ktor.client.request.forms"
         val MultiPartFormDataContent = ClassName(KTOR_CLIENT_REQUEST_FORMS, "MultiPartFormDataContent")
         val FormDataContent = ClassName(KTOR_CLIENT_REQUEST_FORMS, "FormDataContent")
-
+        val FilePart = ClassName(COMPANION_PACKAGE, "FilePart")
+        val ContentType = ClassName(KTOR_HTTP_PACKAGE, "ContentType")
 
         val ApiHolder = ClassName(COMPANION_PACKAGE, "ApiHolder")
         val AuthItem = ClassName(COMPANION_PACKAGE, "AuthItem")
@@ -75,7 +76,8 @@ class PoetTypes(
             SpecPrimitiveType.Date,
             SpecPrimitiveType.Time,
             SpecPrimitiveType.Duration,
-            SpecPrimitiveType.UUID -> null
+            SpecPrimitiveType.UUID,
+            SpecPrimitiveType.Binary -> null
         }
 
         private val CALL_EXCEPTION = ClassName(COMPANION_PACKAGE, "CallException")
@@ -121,6 +123,9 @@ object PoetMembers {
     val AppendSerializedCookieParameter = MemberName(COMPANION_PACKAGE, "appendSerializedCookieParameter")
     val CreateSerializedPathSegment = MemberName(COMPANION_PACKAGE, "createSerializedPathSegment")
     val AsFormDataContent = MemberName(COMPANION_PACKAGE, "asFormDataContent")
+    val AppendFilePart = MemberName(COMPANION_PACKAGE, "appendFilePart")
+    val AppendSerializedPart = MemberName(COMPANION_PACKAGE, "appendSerializedPart")
+    val FormData = MemberName("io.ktor.client.request.forms", "formData")
     val AuthKeys = ClassName(COMPANION_PACKAGE, "AuthPlugin", "Plugin").member("authKeys")
     val AppendPathSegments = MemberName(KTOR_HTTP_PACKAGE, "appendPathSegments")
     val TakeFrom = MemberName(KTOR_HTTP_PACKAGE, "takeFrom")

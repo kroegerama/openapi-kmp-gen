@@ -39,7 +39,15 @@ data class SpecOperation(
     val deprecated: Boolean,
     val securityIds: List<String>,
     val description: String?,
-    val summary: String?
+    val summary: String?,
+    /** Raw names of the multipart body properties without type information, which are file parts in a 3.1 document. */
+    val bodyFileParts: Set<String>,
+    /** Whether a multipart body of a 3.0 document has a property without type information. */
+    val bodyHasAmbiguousParts: Boolean,
+    /** By raw property name, the first `encoding.contentType` entry without a wildcard, or the whole list if all are wildcards. */
+    val bodyPartContentTypes: Map<String, String>,
+    /** By raw property name, the `contentMediaType` without a wildcard of the multipart body properties or their array items. */
+    val bodyPartMediaTypes: Map<String, String>
 ) {
     enum class Type {
         Default,

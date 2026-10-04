@@ -9,8 +9,10 @@ import com.kroegerama.openapi.kmp.gen.language.asTypeName
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.Operation
 import io.swagger.v3.oas.models.PathItem
+import io.swagger.v3.oas.models.SpecVersion
 import io.swagger.v3.oas.models.info.Info
 import io.swagger.v3.oas.models.media.Discriminator
+import io.swagger.v3.oas.models.media.MediaType
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters.CookieParameter
 import io.swagger.v3.oas.models.parameters.HeaderParameter
@@ -20,6 +22,8 @@ import io.swagger.v3.oas.models.parameters.QueryParameter
 import io.swagger.v3.oas.models.security.SecurityScheme
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Collections
+import java.util.IdentityHashMap
 
 typealias SchemaNameEvaluator = (List<String>) -> List<String>
 typealias SchemaEmitter = (SpecSchema.NamedSpecSchema) -> Unit
@@ -237,6 +241,9 @@ class SpecConverter(
                 )
             }
         }
+        val multipartParts = requestBodyEntry?.value?.takeIf {
+            requestBodyType == SpecOperation.Type.Multipart
+        }?.let { classifyMultipartParts(it) } ?: MultipartParts.None
 
         val response = operation.responses?.let {
             val (_, apiResponse) = it.entries.minByOrNull { (code, _) ->
@@ -310,9 +317,70 @@ class SpecConverter(
             deprecated = operation.deprecated ?: false,
             securityIds = securityIds,
             description = operation.description?.ifBlank { null },
-            summary = operation.summary?.ifBlank { null }
+            summary = operation.summary?.ifBlank { null },
+            bodyFileParts = multipartParts.fileParts,
+            bodyHasAmbiguousParts = multipartParts.hasAmbiguousParts,
+            bodyPartContentTypes = multipartParts.contentTypes,
+            bodyPartMediaTypes = multipartParts.mediaTypes
         )
     }
+
+    private data class MultipartParts(
+        val fileParts: Set<String>,
+        val hasAmbiguousParts: Boolean,
+        val contentTypes: Map<String, String>,
+        val mediaTypes: Map<String, String>
+    ) {
+        companion object {
+            val None = MultipartParts(emptySet(), false, emptyMap(), emptyMap())
+        }
+    }
+
+    private fun classifyMultipartParts(mediaType: MediaType): MultipartParts {
+        val bodySchema = mediaType.schema ?: return MultipartParts.None
+        val bodyTypeNames = bodySchema.effectiveSchema().`$ref`?.refAsTypeNames()
+        val properties = bodySchema.resolveProperties(
+            spec = spec,
+            ignoreProperties = bodyTypeNames?.let { ignoredProperties[it] }.orEmpty()
+        )
+        val is31 = spec.specVersion == SpecVersion.V31
+        val untypedParts = mutableSetOf<String>()
+        val mediaTypes = mutableMapOf<String, String>()
+        properties.forEach { (name, propertySchema) ->
+            val resolved = propertySchema.resolvePart()
+            val target = if (resolved.getSpecType() == SpecSchemaType.Array) resolved.items?.resolvePart() else resolved
+            if (target != null && target.isUntyped()) {
+                untypedParts += name
+            }
+            target?.contentMediaType?.trim()?.takeIf { it.isNotEmpty() && '*' !in it }?.let {
+                mediaTypes[name] = it
+            }
+        }
+        val contentTypes = mediaType.encoding.orEmpty().mapNotNull { (name, encoding) ->
+            if (name !in properties) return@mapNotNull null
+            val entries = encoding.contentType?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
+            val contentType = entries.firstOrNull { '*' !in it } ?: entries.joinToString(",").ifEmpty { null }
+            contentType?.let { name to it }
+        }.toMap()
+        return MultipartParts(
+            fileParts = if (is31) untypedParts else emptySet(),
+            hasAmbiguousParts = !is31 && untypedParts.isNotEmpty(),
+            contentTypes = contentTypes,
+            mediaTypes = mediaTypes
+        )
+    }
+
+    private fun Schema<*>.resolvePart(): Schema<*> {
+        val visited: MutableSet<Schema<*>> = Collections.newSetFromMap(IdentityHashMap())
+        var resolved = effectiveSchema()
+        while (resolved.`$ref` != null && visited.add(resolved)) {
+            resolved = (resolved.resolveRef(spec) ?: break).effectiveSchema()
+        }
+        return resolved
+    }
+
+    private fun Schema<*>.isUntyped(): Boolean =
+        type == null && types.isNullOrEmpty() && enum.isNullOrEmpty() && getSpecType() == SpecSchemaType.Raw
 
     private fun convertParameter(parameter: Parameter): SpecParameter {
         if (parameter.`$ref` != null) {

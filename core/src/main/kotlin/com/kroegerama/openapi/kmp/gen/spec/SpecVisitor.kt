@@ -9,6 +9,7 @@ import io.swagger.v3.oas.models.headers.Header
 import io.swagger.v3.oas.models.media.Content
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters.Parameter
+import io.swagger.v3.oas.models.parameters.RequestBody
 import io.swagger.v3.oas.models.responses.ApiResponse
 import java.util.IdentityHashMap
 
@@ -36,14 +37,14 @@ class SpecVisitor(
             )
         }
         openAPI.components?.schemas?.forEach { (_, schema) ->
-                val forceCreate = schema.extensions?.get(Constants.EXT_FORCE_CREATE) as? Boolean == true
-                if (allComponentSchemas || forceCreate || options.generateAllNamedSchemas) {
-                    visitSchema(
-                        visFun = { obj -> visited.put(obj, marker) == null },
-                        schema = schema,
-                        visitor = visitor
-                    )
-                }
+            val forceCreate = schema.extensions?.get(Constants.EXT_FORCE_CREATE) as? Boolean == true
+            if (allComponentSchemas || forceCreate || options.generateAllNamedSchemas) {
+                visitSchema(
+                    visFun = { obj -> visited.put(obj, marker) == null },
+                    schema = schema,
+                    visitor = visitor
+                )
+            }
         }
     }
 
@@ -75,8 +76,8 @@ class SpecVisitor(
         operation.parameters?.forEach { parameter ->
             visitParameter(visFun, parameter, visitor)
         }
-        operation.requestBody?.content?.let { content ->
-            visitContent(visFun, content, visitor)
+        operation.requestBody?.let { requestBody ->
+            visitRequestBody(visFun, requestBody, visitor)
         }
         operation.responses?.forEach { (_, response) ->
             visitResponse(visFun, response, visitor)
@@ -95,10 +96,32 @@ class SpecVisitor(
         parameter: Parameter,
         visitor: (schema: Schema<*>) -> Unit
     ) {
+        val refParameter = parameter.`$ref`?.substringAfterLast('/')
+        if (refParameter != null) {
+            openAPI.components?.parameters?.get(refParameter)?.let {
+                visitParameter(visFun, it, visitor)
+            }
+        }
         parameter.schema?.let { schema ->
             visitSchema(visFun, schema, visitor)
         }
         parameter.content?.let { content ->
+            visitContent(visFun, content, visitor)
+        }
+    }
+
+    private fun visitRequestBody(
+        visFun: (Any) -> Boolean,
+        requestBody: RequestBody,
+        visitor: (schema: Schema<*>) -> Unit
+    ) {
+        val refRequestBody = requestBody.`$ref`?.substringAfterLast('/')
+        if (refRequestBody != null) {
+            openAPI.components?.requestBodies?.get(refRequestBody)?.let {
+                visitRequestBody(visFun, it, visitor)
+            }
+        }
+        requestBody.content?.let { content ->
             visitContent(visFun, content, visitor)
         }
     }

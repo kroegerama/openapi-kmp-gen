@@ -52,5 +52,6 @@ enum class SpecPrimitiveType {
     EpochSeconds,
     EpochMilliseconds,
     Base64,
-    UUID
+    UUID,
+    Binary
 }

@@ -192,6 +192,34 @@ class FormDataContentTest {
     }
 
     @Test
+    fun multiPartSendsOnePartPerArrayItem() = runTest {
+        val parts = renderParts(Tagged(tags = listOf("a", null, "b")).asMultiPartFormDataContent(ApiJson))
+
+        assertEquals(listOf("tags", "tags"), parts.map { it.name })
+        assertEquals(listOf("a", "b"), parts.map { it.body })
+        assertTrue(parts.all { it.header("Content-Type") == null }, parts.toString())
+    }
+
+    @Test
+    fun multiPartSendsObjectsAsJson() = runTest {
+        val parts = renderParts(WithObject(id = 1, nested = Nested(id = 2, tags = listOf("a", "b"))).asMultiPartFormDataContent(ApiJson))
+
+        assertEquals(listOf("id", "nested"), parts.map { it.name })
+        assertEquals(listOf("1", """{"id":2,"tags":["a","b"]}"""), parts.map { it.body })
+        assertEquals(listOf(null, "application/json"), parts.map { it.header("Content-Type") })
+    }
+
+    @Test
+    fun multiPartSendsObjectItemsAsJson() = runTest {
+        val items = listOf(Nested(id = 1, tags = listOf("a")), Nested(id = 2, tags = emptyList()))
+        val parts = renderParts(ObjectItems(items = items).asMultiPartFormDataContent(ApiJson))
+
+        assertEquals(listOf("items", "items"), parts.map { it.name })
+        assertEquals(listOf("""{"id":1,"tags":["a"]}""", """{"id":2,"tags":[]}"""), parts.map { it.body })
+        assertTrue(parts.all { it.header("Content-Type") == "application/json" }, parts.toString())
+    }
+
+    @Test
     fun formDataUsesProvidedJson() {
         // ApiJson encodes defaulted properties, a Json without encodeDefaults omits them
         val withDefaults = WithDefault(name = "Alice").asFormDataContent(json = ApiJson)

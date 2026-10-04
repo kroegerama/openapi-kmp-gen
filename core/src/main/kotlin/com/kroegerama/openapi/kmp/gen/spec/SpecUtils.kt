@@ -41,6 +41,7 @@ fun Schema<*>.getSpecType(): SpecSchemaType {
             }
 
             "string" -> when (format) {
+                "binary" -> SpecPrimitiveType.Binary
                 "date" -> SpecPrimitiveType.Date
                 "time" -> SpecPrimitiveType.Time
                 "date-time" -> SpecPrimitiveType.DateTime
@@ -48,7 +49,7 @@ fun Schema<*>.getSpecType(): SpecSchemaType {
                 "byte" -> SpecPrimitiveType.Base64
                 "uuid" -> SpecPrimitiveType.UUID
                 "duration" -> SpecPrimitiveType.Duration
-                else -> SpecPrimitiveType.String
+                else -> if (contentMediaType != null && contentEncoding == null) SpecPrimitiveType.Binary else SpecPrimitiveType.String
             }
 
             "boolean" -> SpecPrimitiveType.Boolean
@@ -344,6 +345,8 @@ private fun Schema<*>.resolveType(): String {
             return it
         }
     }
+    // contentEncoding only applies to strings, so it implies the type of a typeless schema
+    if (contentEncoding != null) return "string"
     return "object"
 }
 

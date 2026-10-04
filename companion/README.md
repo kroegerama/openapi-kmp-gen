@@ -18,7 +18,7 @@ com.kroegerama.openapi.kmp.gen.companion
 ├── Request.kt                # eitherRequest extension for HttpClient
 ├── Serializers.kt            # KSerializer implementations (Base64, epoch, ISO 8601, ImmutableList)
 ├── SerializerUtils.kt        # Parameter and body serialization helpers (path, query, header, cookie, body)
-├── FormDataContent.kt        # Helpers to convert @Serializable objects to form data
+├── FormDataContent.kt        # Form data helpers: @Serializable objects to form data, FilePart and multipart part helpers
 ├── JWT.kt                    # JWT parser (no signature validation)
 └── keycloak/
     ├── Keycloak.kt               # Keycloak client: login, auto-refresh, logout, discovery, auth-code and device flows
@@ -204,10 +204,38 @@ Each top-level property becomes one entry and `null` properties are skipped. Onl
 - Nested objects are sent as JSON text.
 - `encoding` entries of URL-encoded request bodies in the spec are ignored.
 
-`asMultiPartFormDataContent` sends every property as a text part. An array is sent as a single JSON-text part there, unlike
-`asFormDataContent`, which sends one pair per item. Binary parts are not supported; build file uploads with Ktor's `formData { }` instead.
+`asMultiPartFormDataContent` appends every property as `appendSerializedPart` does (see below): primitives as text parts, one part per
+array item, and objects as `application/json` parts. Binary parts are not supported; build file uploads with
+`formData { appendFilePart(...) }` instead.
 
 A custom `Json` needs `encodeDefaults = true`, otherwise properties that hold their default value are left out of the form.
+
+#### Multipart parts
+
+Generated code builds typed multipart bodies with Ktor's `formData { }` and these `FormBuilder` extensions:
+
+- `FilePart(size, filename, contentType) { ByteReadChannel(...) }` - content of one file part. The provider is called on every send and
+  has to return a fresh channel, because a request can be sent more than once (for example the retry after a 401). A known `size` adds a
+  `Content-Length` header to the part. `FilePart(bytes, filename, contentType)` builds the provider and size from a `ByteArray`.
+- `appendFilePart(name, value, defaultContentType)` - appends one file part with the `filename` in its `Content-Disposition` and a
+  `Content-Type` header, taken from the `FilePart` or else from `defaultContentType`. A `FilePart` without a filename is sent with the
+  part name as `filename`. A `null` value appends nothing; lists are appended per item.
+- `appendSerializedPart(name, value, json)` - appends a value as text: a primitive as one text part, an array as one part per non-null
+  item, and an object, or an array item that is an object or array, as one part with its JSON text and `Content-Type: application/json`.
+  `null` and `JsonNull` append nothing. An overload takes an explicit `serializer`, as the parameter helpers do.
+
+```kotlin
+val content = MultiPartFormDataContent(
+    formData {
+        appendFilePart(
+            name = "file",
+            value = FilePart(bytes, filename = "report.pdf", contentType = ContentType.Application.Pdf),
+            defaultContentType = ContentType.Application.OctetStream
+        )
+        appendSerializedPart(name = "tags", value = listOf("a", "b"), json = Api.json)
+    }
+)
+```
 
 ### `JWT`
 
@@ -292,6 +320,23 @@ Api.setAuthProvider(Auth.BearerAuth {
 val result = DefaultApi.getPhoto(1)
 // result: Either<CallException, HttpCallResponse<Photo>>
 ```
+
+A `multipart/form-data` request body whose schema declares properties is flattened into one parameter per part, with `FilePart` for
+binary parts:
+
+```kotlin
+DefaultApi.upload(
+    file = FilePart(bytes, filename = "report.pdf", contentType = ContentType.Application.Pdf),
+    description = "Q3",
+    tags = listOf("a", "b")
+)
+```
+
+A multipart body without `required: true` has only nullable parts with default `null`, and it is sent only when at least one of them is
+non-null; otherwise the request has no body.
+
+A file part without a `contentType` of its own is sent with the content type the spec declares for it (`encoding.contentType`, then
+`contentMediaType`), or else `application/octet-stream`. Wildcards such as `image/*` are skipped.
 
 ## Notes
 

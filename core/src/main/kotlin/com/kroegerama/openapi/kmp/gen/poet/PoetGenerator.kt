@@ -1,6 +1,8 @@
 package com.kroegerama.openapi.kmp.gen.poet
 
+import com.kroegerama.openapi.kmp.gen.Constants
 import com.kroegerama.openapi.kmp.gen.OptionSet
+import com.kroegerama.openapi.kmp.gen.language.asFieldName
 import com.kroegerama.openapi.kmp.gen.spec.SpecApi
 import com.kroegerama.openapi.kmp.gen.spec.SpecModel
 import com.kroegerama.openapi.kmp.gen.spec.SpecOperation
@@ -212,13 +214,15 @@ class PoetGenerator(
     }
 
     private fun createOperation(operation: SpecOperation): FunSpec {
+        val multipartBody = operation.body?.let { typedMultipartBody(operation, it) }
         return poetFunSpec(operation.name) {
             addModifiers(KModifier.SUSPEND)
 
             val kdoc = listOfNotNull(
                 operation.summary?.let { "**$it**" },
                 "`${operation.method} ${operation.path}`",
-                operation.description
+                operation.description,
+                multipartBody?.description?.ifBlank { null }
             ).joinToString("\n\n")
             addKdoc("%L", kdoc)
 
@@ -233,7 +237,9 @@ class PoetGenerator(
             }
             addParameters(operation.parameters.map(::createParameter))
 
-            operation.body?.let { body ->
+            if (multipartBody != null) {
+                addParameters(multipartBody.parts.map(::createMultipartPartParameter))
+            } else operation.body?.let { body ->
                 addParameter(
                     when (operation.type) {
                         SpecOperation.Type.Default -> createBodyParameter(body)
@@ -270,7 +276,7 @@ class PoetGenerator(
                 beginControlFlow("return %T.client.%M", types.api, PoetMembers.EitherRequest)
             }
 
-            addStatement("method = %T.parse(%S)", PoetTypes.HttpMethod, operation.method.name)
+            addStatement("this.method = %T.parse(%S)", PoetTypes.HttpMethod, operation.method.name)
 
             if (operation.securityIds.isNotEmpty()) {
                 val authKeysCodeBlock = buildCodeBlock {
@@ -286,11 +292,11 @@ class PoetGenerator(
             }
 
             operation.serverOverride?.let { override ->
-                addStatement("url.%M(%S)", PoetMembers.TakeFrom, override)
+                addStatement("this.url.%M(%S)", PoetMembers.TakeFrom, override)
             }
 
             val pathCodeBlock = buildCodeBlock {
-                addStatement("url.%M(", PoetMembers.AppendPathSegments)
+                addStatement("this.url.%M(", PoetMembers.AppendPathSegments)
                 withIndent {
                     operation.path.trimStart('/').split('/').forEach { part ->
                         if (part.startsWith('{') && part.endsWith('}')) {
@@ -355,7 +361,9 @@ class PoetGenerator(
                 }
             }
 
-            operation.body?.let { body ->
+            if (multipartBody != null) {
+                addMultipartBodyStatements(operation, multipartBody)
+            } else operation.body?.let { body ->
                 // an omitted optional body sends neither content type nor payload; a typed form body has no null representation
                 val guardNull = !body.required || (isTypedUrlEncodedBody(operation, body) && body.acceptsNull)
                 if (guardNull) {
@@ -438,6 +446,183 @@ class PoetGenerator(
         val ref = info.type as? SpecSchema.Ref ?: return false
         val schema = namedSchemas[ref.typeNames] as? SpecSchema.Object ?: return false
         return schema.additionalProperties == null
+    }
+
+    private enum class MultipartPartKind { File, FileList, Value }
+
+    private class MultipartPart(
+        val property: SpecProperty,
+        val parameterName: String,
+        val kind: MultipartPartKind,
+        val nullable: Boolean,
+        val itemsNullable: Boolean
+    )
+
+    private class MultipartBody(
+        val required: Boolean,
+        val description: String?,
+        val parts: List<MultipartPart>
+    )
+
+    private fun typedMultipartBody(operation: SpecOperation, info: SpecOperation.SchemaInfo): MultipartBody? {
+        if (operation.type != SpecOperation.Type.Multipart || operation.bodyHasAmbiguousParts) return null
+        val ref = info.type as? SpecSchema.Ref ?: return null
+        val schema = namedSchemas[ref.typeNames] as? SpecSchema.Object ?: return null
+        if (schema.additionalProperties != null || schema.properties.isEmpty()) return null
+        val usedNames = operation.parameters.map { it.name } + "decorator"
+        val parts = schema.properties.map { property ->
+            val kind = multipartPartKind(operation, property)
+            val contentType = operation.bodyPartContentTypes[property.rawName]
+            if (kind == MultipartPartKind.Value && contentType != null && !contentType.coversMediaType(defaultPartMediaType(property.type))) {
+                return null
+            }
+            MultipartPart(
+                property = property,
+                parameterName = if (property.name in usedNames) "body.${property.name}".asFieldName() else property.name,
+                kind = kind,
+                nullable = property.nullable || !info.required,
+                itemsNullable = (resolveAlias(property.type) as? SpecSchema.Array)?.itemsNullable == true
+            )
+        }
+        return MultipartBody(
+            required = info.required,
+            description = info.description,
+            parts = parts
+        )
+    }
+
+    private fun multipartPartKind(operation: SpecOperation, property: SpecProperty): MultipartPartKind {
+        val untyped = property.rawName in operation.bodyFileParts
+        return when (val resolved = resolveAlias(property.type)) {
+            is SpecSchema.Array -> if (untyped || isBinary(resolveAlias(resolved.items))) {
+                MultipartPartKind.FileList
+            } else {
+                MultipartPartKind.Value
+            }
+
+            else -> if (untyped || isBinary(resolved)) MultipartPartKind.File else MultipartPartKind.Value
+        }
+    }
+
+    private fun isBinary(simpleType: SpecSchema.SimpleType): Boolean =
+        simpleType is SpecSchema.Primitive && simpleType.type == SpecPrimitiveType.Binary
+
+    private fun String.asMediaType(): String = substringBefore(';').trim().lowercase()
+
+    private fun String.coversMediaType(mediaType: String): Boolean {
+        if ('*' !in this) return asMediaType() == mediaType
+        val wildcards = setOf("*/*", "${mediaType.substringBefore('/')}/*")
+        return split(',').any { it.asMediaType() in wildcards }
+    }
+
+    private fun defaultPartMediaType(simpleType: SpecSchema.SimpleType): String = when (val resolved = resolveAlias(simpleType)) {
+        is SpecSchema.Primitive -> MIME_TYPE_TEXT_PLAIN
+        is SpecSchema.Array -> if (resolveAlias(resolved.items) is SpecSchema.Array) {
+            Constants.MIME_TYPE_JSON
+        } else {
+            defaultPartMediaType(resolved.items)
+        }
+
+        is SpecSchema.Ref -> if (namedSchemas[resolved.typeNames] is SpecSchema.Enum) MIME_TYPE_TEXT_PLAIN else Constants.MIME_TYPE_JSON
+        else -> Constants.MIME_TYPE_JSON
+    }
+
+    private tailrec fun resolveAlias(simpleType: SpecSchema.SimpleType): SpecSchema.SimpleType {
+        val alias = (simpleType as? SpecSchema.Ref)
+            ?.let { namedSchemas[it.typeNames] as? SpecSchema.Typealias }
+            ?: return simpleType
+        return resolveAlias(alias.schema)
+    }
+
+    private fun createMultipartPartParameter(part: MultipartPart): ParameterSpec {
+        val property = part.property
+        val type = when (part.kind) {
+            MultipartPartKind.File -> PoetTypes.FilePart
+            MultipartPartKind.FileList -> LIST.parameterizedBy(PoetTypes.FilePart.nullable(part.itemsNullable))
+            MultipartPartKind.Value -> convertSimpleType(property.type)
+        }
+        return poetParameter(part.parameterName, type.nullable(part.nullable)) {
+            val schema = property.type
+            when {
+                part.nullable -> defaultValue("null")
+                schema is SpecSchema.Array -> defaultValue("%M()", PoetMembers.EmptyList)
+                schema is SpecSchema.Map -> defaultEmptyMap(schema)
+            }
+            property.description?.let {
+                addKdoc("%L", it)
+            }
+        }
+    }
+
+    private fun FunSpec.Builder.addMultipartBodyStatements(operation: SpecOperation, body: MultipartBody) {
+        if (!body.required) {
+            // an optional body is only sent when at least one part is present
+            val anyPresent = body.parts.map { CodeBlock.of("%N != null", it.parameterName) }.joinToCode(" || ")
+            beginControlFlow("if (%L)", anyPresent)
+        }
+        val code = buildCodeBlock {
+            add("%M(%T(%M·{\n", PoetMembers.RequestSetBody, PoetTypes.MultiPartFormDataContent, PoetMembers.FormData)
+            withIndent {
+                body.parts.forEach { part ->
+                    addMultipartPart(operation, part)
+                }
+            }
+            add("}))\n")
+        }
+        addCode(code)
+        if (!body.required) {
+            endControlFlow()
+        }
+    }
+
+    private fun CodeBlock.Builder.addMultipartPart(operation: SpecOperation, part: MultipartPart) {
+        val rawName = part.property.rawName
+        val contentType = operation.bodyPartContentTypes[rawName]?.takeIf { '*' !in it }
+            ?: operation.bodyPartMediaTypes[rawName]
+            ?: MIME_TYPE_OCTET_STREAM
+        if (part.kind != MultipartPartKind.Value && !contentTypeRegex.matches(contentType)) {
+            throw IllegalStateException(
+                "cannot generate '${operation.name}': the multipart part '$rawName' has the invalid content type '$contentType'"
+            )
+        }
+        val defaultContentType = CodeBlock.of("%T.parse(%S)", PoetTypes.ContentType, contentType)
+        when (part.kind) {
+            MultipartPartKind.File -> addStatement(
+                "%M(name = %S, value = %N, defaultContentType = %L)",
+                PoetMembers.AppendFilePart,
+                rawName,
+                part.parameterName,
+                defaultContentType
+            )
+
+            MultipartPartKind.FileList -> {
+                beginControlFlow("%N%L.forEach", part.parameterName, if (part.nullable) "?" else "")
+                addStatement("%M(name = %S, value = it, defaultContentType = %L)", PoetMembers.AppendFilePart, rawName, defaultContentType)
+                endControlFlow()
+            }
+
+            MultipartPartKind.Value -> {
+                val serializer = explicitSerializer(part.property.type)
+                if (serializer != null) {
+                    addStatement(
+                        "%M(name = %S, value = %N, serializer = %L, json = %T.json)",
+                        PoetMembers.AppendSerializedPart,
+                        rawName,
+                        part.parameterName,
+                        serializer,
+                        types.api
+                    )
+                } else {
+                    addStatement(
+                        "%M(name = %S, value = %N, json = %T.json)",
+                        PoetMembers.AppendSerializedPart,
+                        rawName,
+                        part.parameterName,
+                        types.api
+                    )
+                }
+            }
+        }
     }
 
     private fun createAnyBodyParameter(info: SpecOperation.SchemaInfo): ParameterSpec {
@@ -788,6 +973,7 @@ class PoetGenerator(
             SpecPrimitiveType.EpochSeconds -> PoetTypes.SerializableEpochSeconds
             SpecPrimitiveType.EpochMilliseconds -> PoetTypes.SerializableEpochMilliseconds
             SpecPrimitiveType.UUID -> PoetTypes.Uuid
+            SpecPrimitiveType.Binary -> STRING
         }
 
         is SpecSchema.Array -> LIST.parameterizedBy(
@@ -831,4 +1017,13 @@ class PoetGenerator(
 
     private fun immutable() = poetAnnotation(PoetTypes.Immutable) {}
 
+    companion object {
+        private const val MIME_TYPE_TEXT_PLAIN = "text/plain"
+        private const val MIME_TYPE_OCTET_STREAM = "application/octet-stream"
+
+        private const val TOKEN = "[!#$%&'*+.^_`|~0-9A-Za-z-]+"
+
+        // type "/" subtype as RFC 7230 tokens, followed by parameters whose value is a token or a quoted string
+        private val contentTypeRegex = Regex("""$TOKEN/$TOKEN(?:[ \t]*;[ \t]*$TOKEN=(?:$TOKEN|"(?:[^"\\]|\\.)*"))*""")
+    }
 }
