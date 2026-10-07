@@ -151,6 +151,24 @@ public abstract class ApiHolder {
         })
     }
 
+    @Deprecated(
+        message = "The client is created by updateClient. Move the engine setup of createHttpClient into the block (engine { }) or pass an " +
+                "engine, and install HttpCookies and ContentEncoding in the block instead of withCookies and withCompression.",
+        replaceWith = ReplaceWith("updateClient(json, userAgent, decorator)"),
+        level = DeprecationLevel.ERROR
+    )
+    @Suppress("UNUSED_PARAMETER")
+    public fun updateClient(
+        json: Json = ApiJson,
+        userAgent: String? = defaultUserAgent,
+        withCookies: Boolean = false,
+        withCompression: Boolean = false,
+        createHttpClient: (decorator: HttpClientConfig<PlatformHttpClientEngineConfig>.() -> Unit) -> HttpClient,
+        decorator: HttpClientConfig<PlatformHttpClientEngineConfig>.() -> Unit = {}
+    ) {
+        error("Removed, use updateClient(json, userAgent, block)")
+    }
+
     /**
      * Sets the [UnauthorizedHandler] consulted when a request with auth keys is answered with
      * 401 Unauthorized; the request is retried once with freshly resolved auth values when the
