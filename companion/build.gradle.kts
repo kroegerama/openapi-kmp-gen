@@ -8,10 +8,10 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompileCommon
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.android.kotlin.multiplatform.library)
-    alias(libs.plugins.vanniktech.mavenPublish)
+    alias(libs.plugins.maven.publish)
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -46,8 +46,14 @@ kotlin {
 
     android {
         namespace = "com.kroegerama.openapi.kmp.gen.companion"
-        compileSdk = libs.versions.android.compileSdk.get().toInt()
-        minSdk = libs.versions.android.minSdk.get().toInt()
+        compileSdk {
+            version = release(libs.versions.android.compileSdk.get().toInt()) {
+                minorApiLevel = libs.versions.android.compileSdkMinor.get().toInt()
+            }
+        }
+        minSdk {
+            version = release(libs.versions.android.minSdk.get().toInt())
+        }
         enableCoreLibraryDesugaring = true
 
         compilerOptions {
@@ -75,7 +81,7 @@ kotlin {
             api(libs.ktor.client.auth)
             api(libs.ktor.serialization.kotlinx.json)
             api(libs.arrow.core)
-            api(libs.compose.runtime.annotation)
+            api(libs.androidx.compose.runtime.annotation)
         }
         androidMain.dependencies {
             api(libs.ktor.client.okhttp)

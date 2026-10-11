@@ -2,11 +2,11 @@ import com.vanniktech.maven.publish.MavenPublishBaseExtension
 
 plugins {
     alias(libs.plugins.android.kotlin.multiplatform.library) apply false
-    alias(libs.plugins.kotlinJvm) apply false
-    alias(libs.plugins.kotlinMultiplatform) apply false
-    alias(libs.plugins.kotlinSerialization) apply false
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.shadow) apply false
-    alias(libs.plugins.vanniktech.mavenPublish) apply false
+    alias(libs.plugins.maven.publish) apply false
 }
 
 allprojects {

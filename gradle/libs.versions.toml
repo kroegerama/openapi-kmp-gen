@@ -1,64 +1,65 @@
 [versions]
 agp = "9.4.1"
-kotlin = "2.4.20"
+kotlin = "2.4.21"
 android-minSdk = "21"
 android-compileSdk = "37"
-vanniktechMavenPublish = "0.37.0"
-coroutines = "1.11.0"
-ktor = "3.6.0"
-serialization = "1.11.0"
+android-compileSdkMinor = "2"
+airline = "0.9"
 arrow = "2.2.3"
-compose = "1.12.1"
 collections-immutable = "0.5.2"
+compose = "1.12.1"
+coroutines = "1.11.0"
 datetime = "0.8.0"
 desugar = "2.1.5"
-robolectric = "4.17"
-shadow = "9.6.1"
-airline = "0.9"
+gradle-publish = "2.2.1"
 guava = "33.7.2-jre"
 kotlinpoet = "2.4.0"
-swagger-parser = "2.1.48"
-gradle-publish = "2.2.1"
-slf4f = "2.0.20"
+ktor = "3.6.0"
 logback-android = "3.0.0"
 logback-classic = "1.6.5"
+maven-publish = "0.37.0"
+robolectric = "4.17"
+serialization = "1.11.0"
+shadow = "9.6.1"
+slf4j = "2.0.20"
+swagger-parser = "2.1.48"
 
 [libraries]
+agp = { module = "com.android.tools.build:gradle", version.ref = "agp" }
+airline = { module = "io.airlift:airline", version.ref = "airline" }
+androidx-compose-runtime-annotation = { module = "androidx.compose.runtime:runtime-annotation", version.ref = "compose" }
+arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
+desugar = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
+kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "collections-immutable" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
-ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
-kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
-kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "collections-immutable" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
-ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
-ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
-ktor-client-curl = { module = "io.ktor:ktor-client-curl", version.ref = "ktor" }
-ktor-client-winhttp = { module = "io.ktor:ktor-client-winhttp", version.ref = "ktor" }
-ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
-ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 ktor-client-auth = { module = "io.ktor:ktor-client-auth", version.ref = "ktor" }
-arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
-compose-runtime-annotation = { module = "androidx.compose.runtime:runtime-annotation", version.ref = "compose" }
-desugar = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar" }
-robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
-airline = { module = "io.airlift:airline", version.ref = "airline" }
-guava = { module = "com.google.guava:guava", version.ref = "guava" }
-kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
-swagger-parser = { module = "io.swagger.parser.v3:swagger-parser", version.ref = "swagger-parser" }
-kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
-agp = { module = "com.android.tools.build:gradle", version.ref = "agp" }
-lsf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4f" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-curl = { module = "io.ktor:ktor-client-curl", version.ref = "ktor" }
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-winhttp = { module = "io.ktor:ktor-client-winhttp", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 logback-android = { module = "com.github.tony19:logback-android", version.ref = "logback-android" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback-classic" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+swagger-parser = { module = "io.swagger.parser.v3:swagger-parser", version.ref = "swagger-parser" }
 
 [plugins]
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
-kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
-vanniktech-mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktechMavenPublish" }
 gradle-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-publish" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }

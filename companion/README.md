@@ -66,7 +66,8 @@ Abstract base class that generated API objects extend (e.g. `object Api : ApiHol
   `eitherRequest<T>` decodes through the client's content negotiation and takes none.
 
 - `updateClient(json, userAgent) { ... }` - replaces `client` and `json` and closes the previous client. The new client is built on the
-  `PlatformHttpClientEngineFactory` with `createApiHttpClient` (success validation, `User-Agent`, JSON content negotiation) plus the base URL and `AuthPlugin`.
+  `PlatformHttpClientEngineFactory` with `createApiHttpClient` (success validation, `User-Agent`, JSON content negotiation) plus the base URL and
+  `AuthPlugin`.
   An `eitherRequest` started on the previous client afterwards returns an `UnexpectedCallException` without reaching the auth providers
   or the engine (a plain Ktor call throws `IllegalStateException`); one still running on it completes or returns a `CallException`,
   depending on the engine and on how far the request got. The block runs after the defaults and installs anything else:
@@ -199,8 +200,8 @@ Each top-level property becomes one entry and `null` properties are skipped. Onl
 - Primitives are sent as their text form, strings without quotes.
 - Arrays follow OpenAPI form style. With `explode = true` (the default) each item becomes its own pair (`tags=a&tags=b`), with
   `explode = false` the items are joined with commas (`tags=a,b`). `null` items are dropped, and an array without remaining items sends
-  nothing. Items that are arrays or objects are sent as JSON text; without explode they are joined with commas as well
-  (`m=["a"],["b"]`), which a server cannot split reliably.
+  nothing. Items that are arrays or objects are sent as JSON text; without explode they are joined with commas as well (`m=["a"],["b"]`), which a
+  server cannot split reliably.
 - Nested objects are sent as JSON text.
 - `encoding` entries of URL-encoded request bodies in the spec are ignored.
 
@@ -282,23 +283,23 @@ logout, and the [integration test setup](keycloak-testenv/README.md).
 
 All dependencies are exposed with `api` scope.
 
-| Dependency                        | Source Set  |
-|-----------------------------------|-------------|
-| `kotlinx-coroutines-core`         | common      |
-| `kotlinx-datetime`                | common      |
-| `kotlinx-collections-immutable`   | common      |
-| `kotlinx-serialization-json`      | common      |
-| `ktor-client-core`                | common      |
-| `ktor-client-content-negotiation` | common      |
-| `ktor-client-auth`                | common      |
-| `ktor-serialization-kotlinx-json` | common      |
-| `arrow-core`                      | common      |
-| `compose-runtime-annotation`      | common      |
-| `ktor-client-okhttp`              | Android/JVM |
-| `kotlinx-coroutines-android`      | Android     |
-| `ktor-client-darwin`              | Apple       |
-| `ktor-client-curl`                | Linux       |
-| `ktor-client-winhttp`             | MinGW       |
+| Dependency                            | Source Set  |
+|---------------------------------------|-------------|
+| `kotlinx-coroutines-core`             | common      |
+| `kotlinx-datetime`                    | common      |
+| `kotlinx-collections-immutable`       | common      |
+| `kotlinx-serialization-json`          | common      |
+| `ktor-client-core`                    | common      |
+| `ktor-client-content-negotiation`     | common      |
+| `ktor-client-auth`                    | common      |
+| `ktor-serialization-kotlinx-json`     | common      |
+| `arrow-core`                          | common      |
+| `androidx-compose-runtime-annotation` | common      |
+| `ktor-client-okhttp`                  | Android/JVM |
+| `kotlinx-coroutines-android`          | Android     |
+| `ktor-client-darwin`                  | Apple       |
+| `ktor-client-curl`                    | Linux       |
+| `ktor-client-winhttp`                 | MinGW       |
 
 ## Usage in Generated Code
 

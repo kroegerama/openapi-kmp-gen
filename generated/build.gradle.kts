@@ -1,8 +1,8 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.android.kotlin.multiplatform.library)
 }
 
@@ -17,8 +17,14 @@ kotlin {
 
     android {
         namespace = "com.kroegerama.kmp.gen.generated"
-        compileSdk = libs.versions.android.compileSdk.get().toInt()
-        minSdk = libs.versions.android.minSdk.get().toInt()
+        compileSdk {
+            version = release(libs.versions.android.compileSdk.get().toInt()) {
+                minorApiLevel = libs.versions.android.compileSdkMinor.get().toInt()
+            }
+        }
+        minSdk {
+            version = release(libs.versions.android.minSdk.get().toInt())
+        }
         enableCoreLibraryDesugaring = true
 
         compilerOptions {
@@ -36,7 +42,7 @@ kotlin {
             implementation(project(":companion"))
         }
         androidMain.dependencies {
-            implementation(libs.lsf4j.api)
+            implementation(libs.slf4j.api)
             implementation(libs.logback.android)
         }
         jvmMain.dependencies {

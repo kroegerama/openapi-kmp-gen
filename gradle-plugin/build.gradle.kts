@@ -2,9 +2,9 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 plugins {
-    alias(libs.plugins.kotlinJvm)
+    alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.gradle.publish)
-    alias(libs.plugins.vanniktech.mavenPublish)
+    alias(libs.plugins.maven.publish)
 }
 
 kotlin {
